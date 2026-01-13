@@ -7,6 +7,7 @@ import About from './pages/About';
 import Statistics from './pages/Statistics';
 import Donations from './pages/Donations';
 import Login from './pages/Login';
+import PhotoVerification from './pages/PhotoVerification';
 
 function App() {
   return (
@@ -23,6 +24,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Donations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="verification"
+              element={
+                <ProtectedRoute>
+                  <PhotoVerification />
                 </ProtectedRoute>
               }
             />
