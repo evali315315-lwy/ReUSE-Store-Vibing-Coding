@@ -27,14 +27,14 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-eco-primary-500 hover:bg-eco-primary-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg;
+    @apply bg-gradient-to-r from-eco-primary-500 to-eco-teal hover:from-eco-primary-600 hover:to-eco-teal-dark text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 shadow-md hover:shadow-xl hover:scale-105;
   }
 
   .btn-secondary {
-    @apply border-2 border-eco-primary-500 text-eco-primary-600 hover:bg-eco-primary-50 font-semibold py-2 px-6 rounded-lg transition-colors duration-200;
+    @apply border-2 border-eco-primary-500 text-eco-primary-600 hover:bg-gradient-to-r hover:from-eco-primary-50 hover:to-eco-teal-light/20 font-semibold py-2 px-6 rounded-lg transition-all duration-300;
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-md border border-eco-primary-200 p-6 hover:shadow-lg transition-shadow duration-200;
+    @apply bg-white rounded-xl shadow-md border border-eco-primary-200 p-6 hover:shadow-xl transition-all duration-300;
   }
 }

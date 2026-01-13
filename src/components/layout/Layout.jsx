@@ -4,7 +4,7 @@ import Footer from './Footer';
 
 function Layout() {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-eco-primary-50 to-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-eco-primary-50 via-eco-teal-light/10 to-white">
       <Header />
       <main className="flex-grow">
         <Outlet />
