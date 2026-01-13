@@ -7,30 +7,42 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary greens for eco theme
+        // Vibrant greens for eco theme
         'eco-primary': {
-          50: '#f0fdf4',   // Very light mint
-          100: '#dcfce7',  // Light mint
-          200: '#bbf7d0',  // Soft green
-          300: '#86efac',  // Light green (backgrounds)
-          400: '#4ade80',  // Medium green
-          500: '#22c55e',  // Primary green (buttons, accents)
-          600: '#16a34a',  // Dark green (headers)
-          700: '#15803d',  // Deeper green
-          800: '#166534',  // Forest green (text)
-          900: '#14532d',  // Very dark green
+          50: '#ecfdf5',   // Mint cream
+          100: '#d1fae5',  // Bright mint
+          200: '#a7f3d0',  // Light emerald
+          300: '#6ee7b7',  // Seafoam green
+          400: '#34d399',  // Vibrant green
+          500: '#10b981',  // Emerald (primary)
+          600: '#059669',  // Rich emerald
+          700: '#047857',  // Deep emerald
+          800: '#065f46',  // Forest emerald
+          900: '#064e3b',  // Very dark emerald
+        },
+        // Lime accents for energy
+        'eco-lime': {
+          light: '#d9f99d',  // Light lime
+          DEFAULT: '#84cc16', // Lime green
+          dark: '#4d7c0f',   // Dark lime
+        },
+        // Teal accents for depth
+        'eco-teal': {
+          light: '#5eead4',  // Light teal
+          DEFAULT: '#14b8a6', // Teal
+          dark: '#0f766e',   // Dark teal
         },
         // Earthy accents
         'eco-earth': {
-          light: '#d4a574',  // Tan
-          DEFAULT: '#8b7355', // Brown
-          dark: '#5c4a3a',   // Dark brown
+          light: '#fde68a',  // Warm sand
+          DEFAULT: '#d97706', // Amber
+          dark: '#92400e',   // Dark amber
         },
-        // Sky/water accent
-        'eco-sky': {
-          light: '#7dd3fc',  // Light blue
-          DEFAULT: '#0ea5e9', // Blue
-          dark: '#0369a1',   // Dark blue
+        // Squirrel colors
+        'squirrel': {
+          body: '#1a1a1a',    // Black body
+          highlight: '#2d2d2d', // Gray highlights
+          acorn: '#8B4513',   // Acorn brown
         },
       },
       fontFamily: {
