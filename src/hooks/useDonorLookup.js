@@ -16,6 +16,7 @@ function useDonorLookup() {
 
     try {
       const data = await donorAPI.searchDonors(query);
+      console.log('Donors fetched:', data.length, 'donors');
       setDonors(data);
     } catch (err) {
       console.error('Error fetching donors:', err);

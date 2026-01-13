@@ -21,14 +21,7 @@ function App() {
             <Route path="shop" element={<Shop />} />
             <Route path="statistics" element={<Statistics />} />
             <Route path="login" element={<Login />} />
-            <Route
-              path="donations"
-              element={
-                <ProtectedRoute>
-                  <Donations />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="donations" element={<Donations />} />
             <Route
               path="verification"
               element={
