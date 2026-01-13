@@ -27,6 +27,18 @@ function Header() {
               About
             </NavLink>
             <NavLink
+              to="/shop"
+              className={({ isActive }) =>
+                `px-4 py-2 rounded-md font-semibold transition-colors ${
+                  isActive
+                    ? 'bg-white text-eco-primary-600'
+                    : 'hover:bg-eco-primary-500'
+                }`
+              }
+            >
+              Shop
+            </NavLink>
+            <NavLink
               to="/statistics"
               className={({ isActive }) =>
                 `px-4 py-2 rounded-md font-semibold transition-colors ${
