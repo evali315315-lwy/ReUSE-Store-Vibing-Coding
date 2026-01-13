@@ -1,9 +1,9 @@
-import DonationForm from '../components/donations/DonationForm';
+import ProductLogForm from '../components/donations/ProductLogForm';
 
 function Donations() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <DonationForm />
+      <ProductLogForm />
     </div>
   );
 }

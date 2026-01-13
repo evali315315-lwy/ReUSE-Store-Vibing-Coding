@@ -12,6 +12,7 @@
     "server": "node server/index.js"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@hookform/resolvers": "^5.2.2",
     "axios": "^1.13.2",
     "better-sqlite3": "^12.6.0",
@@ -19,9 +20,11 @@
     "csv-parser": "^3.2.0",
     "express": "^5.2.1",
     "firebase": "^12.7.0",
+    "fuse.js": "^7.1.0",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.71.0",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.12.0",
