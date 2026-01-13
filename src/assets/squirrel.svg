@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Black Squirrel Illustration -->
+
+  <!-- Tail (fluffy, curved up) -->
+  <path d="M145 120 Q150 90, 160 70 Q170 50, 175 35 Q180 20, 178 10 Q165 15, 155 30 Q145 45, 140 65 Q135 85, 138 105 Z"
+        fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1.5"/>
+  <path d="M150 115 Q155 85, 165 65 Q175 45, 180 30 Q185 15, 183 5 Q170 10, 160 25 Q150 40, 145 60 Q140 80, 143 100 Z"
+        fill="#2d2d2d" opacity="0.8"/>
+
+  <!-- Body -->
+  <ellipse cx="105" cy="115" rx="35" ry="45" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1.5"/>
+  <ellipse cx="105" cy="118" rx="32" ry="40" fill="#2d2d2d"/>
+
+  <!-- Head -->
+  <circle cx="85" cy="85" r="28" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1.5"/>
+  <circle cx="85" cy="88" r="25" fill="#2d2d2d"/>
+
+  <!-- Ears -->
+  <ellipse cx="70" cy="65" rx="8" ry="12" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1"/>
+  <ellipse cx="100" cy="65" rx="8" ry="12" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1"/>
+
+  <!-- Inner ears -->
+  <ellipse cx="70" cy="67" rx="4" ry="6" fill="#3d3d3d"/>
+  <ellipse cx="100" cy="67" rx="4" ry="6" fill="#3d3d3d"/>
+
+  <!-- Eyes (bright and alert) -->
+  <circle cx="75" cy="82" r="5" fill="white"/>
+  <circle cx="75" cy="82" r="3" fill="#1a1a1a"/>
+  <circle cx="76" cy="81" r="1.5" fill="white"/>
+
+  <circle cx="95" cy="82" r="5" fill="white"/>
+  <circle cx="95" cy="82" r="3" fill="#1a1a1a"/>
+  <circle cx="96" cy="81" r="1.5" fill="white"/>
+
+  <!-- Nose -->
+  <ellipse cx="85" cy="95" rx="3" ry="2" fill="#0a0a0a"/>
+
+  <!-- Mouth (cute smile) -->
+  <path d="M85 95 Q82 98, 78 97" stroke="#0a0a0a" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M85 95 Q88 98, 92 97" stroke="#0a0a0a" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+  <!-- Whiskers -->
+  <line x1="60" y1="88" x2="45" y2="86" stroke="#0a0a0a" stroke-width="0.8"/>
+  <line x1="60" y1="92" x2="45" y2="94" stroke="#0a0a0a" stroke-width="0.8"/>
+  <line x1="110" y1="88" x2="125" y2="86" stroke="#0a0a0a" stroke-width="0.8"/>
+  <line x1="110" y1="92" x2="125" y2="94" stroke="#0a0a0a" stroke-width="0.8"/>
+
+  <!-- Front paws -->
+  <ellipse cx="90" cy="145" rx="10" ry="12" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1"/>
+  <ellipse cx="120" cy="145" rx="10" ry="12" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1"/>
+  <ellipse cx="90" cy="147" rx="8" ry="10" fill="#2d2d2d"/>
+  <ellipse cx="120" cy="147" rx="8" ry="10" fill="#2d2d2d"/>
+
+  <!-- Back paws (sitting position) -->
+  <ellipse cx="85" cy="155" rx="15" ry="10" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1"/>
+  <ellipse cx="125" cy="155" rx="15" ry="10" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1"/>
+
+  <!-- Arms holding acorn -->
+  <ellipse cx="70" cy="115" rx="8" ry="18" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="1"/>
+  <ellipse cx="72" cy="118" rx="6" ry="15" fill="#2d2d2d"/>
+
+  <!-- Acorn (sustainability symbol) -->
+  <ellipse cx="65" cy="130" rx="6" ry="8" fill="#8B4513"/>
+  <path d="M59 125 Q65 122, 71 125 Q68 123, 65 123 Q62 123, 59 125 Z" fill="#654321"/>
+  <line x1="65" y1="123" x2="65" y2="120" stroke="#4a3520" stroke-width="1.5"/>
+</svg>
