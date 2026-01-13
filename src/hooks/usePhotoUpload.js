@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { photoAPI } from '../services/api';
+import { storage } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
 
 function usePhotoUpload() {
@@ -16,13 +17,25 @@ function usePhotoUpload() {
     setError(null);
 
     try {
-      const photoUrl = await photoAPI.uploadPhoto(file);
+      // Create a unique filename with timestamp
+      const timestamp = Date.now();
+      const filename = `donations/${timestamp}-${file.name}`;
+
+      // Create storage reference
+      const storageRef = ref(storage, filename);
+
+      // Upload file
+      await uploadBytes(storageRef, file);
+
+      // Get download URL
+      const photoUrl = await getDownloadURL(storageRef);
+
       setUploadedUrl(photoUrl);
       toast.success('Photo uploaded successfully!');
       return { success: true, url: photoUrl };
     } catch (err) {
       console.error('Error uploading photo:', err);
-      const errorMsg = err.response?.data?.error || err.message || 'Failed to upload photo';
+      const errorMsg = err.message || 'Failed to upload photo';
       setError(errorMsg);
       toast.error(errorMsg);
       return { success: false, error: errorMsg };

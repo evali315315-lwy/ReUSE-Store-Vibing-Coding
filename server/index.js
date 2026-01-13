@@ -319,6 +319,171 @@ app.get('/api/items/search', (req, res) => {
   }
 });
 
+// Search donors (for autocomplete in ProductLogForm)
+// Returns most recent information for each unique email (case-insensitive)
+app.get('/api/donors/search', (req, res) => {
+  try {
+    const { q = '' } = req.query;
+
+    const query = `
+      SELECT
+        owner_name as name,
+        email,
+        housing_assignment as housing,
+        graduation_year as gradYear
+      FROM checkouts
+      WHERE (owner_name LIKE ? OR email LIKE ?)
+        AND id IN (
+          SELECT MAX(id)
+          FROM checkouts
+          GROUP BY LOWER(email)
+        )
+      ORDER BY owner_name
+      LIMIT 50
+    `;
+
+    const donors = db.prepare(query).all(`%${q}%`, `%${q}%`);
+    res.json(donors);
+  } catch (error) {
+    console.error('Error searching donors:', error);
+    res.status(500).json({ error: 'Failed to search donors' });
+  }
+});
+
+// Get all categories
+app.get('/api/categories', (req, res) => {
+  try {
+    const query = `
+      SELECT
+        item_name as name,
+        COUNT(*) as timesUsed
+      FROM items
+      GROUP BY item_name
+      ORDER BY timesUsed DESC
+      LIMIT 100
+    `;
+
+    const categories = db.prepare(query).all();
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+// Create new category (mock - just returns the category name)
+app.post('/api/categories', (req, res) => {
+  try {
+    const { name, createdBy } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Category name is required' });
+    }
+
+    // Return mock category object
+    res.json({
+      name,
+      timesUsed: 0,
+      createdBy: createdBy || 'unknown'
+    });
+  } catch (error) {
+    console.error('Error creating category:', error);
+    res.status(500).json({ error: 'Failed to create category' });
+  }
+});
+
+// Submit new product (creates checkout and item)
+app.post('/api/products', (req, res) => {
+  try {
+    const {
+      donorName,
+      email,
+      housing,
+      gradYear,
+      categoryName,
+      description,
+      photoUrl
+    } = req.body;
+
+    // Validate required fields
+    if (!donorName || !email || !categoryName) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Get current academic year range (e.g., "2025-2026")
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const month = now.getMonth();
+    const yearRange = month >= 7 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
+
+    // Insert checkout
+    const checkoutResult = db.prepare(`
+      INSERT INTO checkouts (
+        date,
+        owner_name,
+        email,
+        housing_assignment,
+        graduation_year,
+        year_range
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      new Date().toISOString(),
+      donorName,
+      email,
+      housing || '',
+      gradYear || '',
+      yearRange
+    );
+
+    const checkoutId = checkoutResult.lastInsertRowid;
+
+    // Insert item
+    const itemResult = db.prepare(`
+      INSERT INTO items (
+        checkout_id,
+        item_name,
+        item_quantity,
+        year_range,
+        image_url,
+        description
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      checkoutId,
+      categoryName,
+      1,
+      yearRange,
+      photoUrl || null,
+      description || null
+    );
+
+    res.json({
+      success: true,
+      checkoutId,
+      itemId: itemResult.lastInsertRowid,
+      message: 'Product logged successfully'
+    });
+  } catch (error) {
+    console.error('Error submitting product:', error);
+    res.status(500).json({ error: 'Failed to submit product' });
+  }
+});
+
+// Mock photo upload endpoint (just returns a placeholder URL)
+app.post('/api/upload', (req, res) => {
+  try {
+    // In a real implementation, this would upload to Google Drive or cloud storage
+    const mockPhotoUrl = `https://placeholder.com/photo-${Date.now()}.jpg`;
+
+    res.json({
+      success: true,
+      url: mockPhotoUrl
+    });
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    res.status(500).json({ error: 'Failed to upload photo' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`\n🚀 ReUSE Store API Server running at http://localhost:${PORT}`);
@@ -328,6 +493,11 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/statistics                - Get statistics (optional ?year=)`);
   console.log(`   GET  /api/checkouts                 - Get checkouts (optional ?year=, ?page=, ?limit=)`);
   console.log(`   GET  /api/checkouts/:id             - Get checkout by ID with items`);
+  console.log(`   GET  /api/donors/search             - Search donors (optional ?q=)`);
+  console.log(`   GET  /api/categories                - Get all categories`);
+  console.log(`   POST /api/categories                - Create new category`);
+  console.log(`   POST /api/products                  - Submit new product`);
+  console.log(`   POST /api/upload                    - Upload photo (mock)`);
   console.log(`   GET  /api/verification/items        - Get items for verification`);
   console.log(`   PATCH /api/verification/items/:id   - Update item verification status`);
   console.log(`   GET  /api/analytics/top-items       - Get top items (optional ?year=)`);
