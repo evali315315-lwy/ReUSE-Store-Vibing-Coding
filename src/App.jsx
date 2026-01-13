@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout';
 import About from './pages/About';
 import Statistics from './pages/Statistics';
 import Donations from './pages/Donations';
+import PhotoVerification from './pages/PhotoVerification';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route index element={<About />} />
           <Route path="statistics" element={<Statistics />} />
           <Route path="donations" element={<Donations />} />
+          <Route path="verification" element={<PhotoVerification />} />
         </Route>
       </Routes>
     </BrowserRouter>
