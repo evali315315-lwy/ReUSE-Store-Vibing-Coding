@@ -1,29 +1,39 @@
 import { Recycle, ShoppingBag, Clock, MapPin, Mail, Heart } from 'lucide-react';
+import squirrelLogo from '../../assets/squirrel.svg';
 
 function AboutContent() {
   return (
     <div className="space-y-12">
-      {/* Hero Section */}
-      <section className="text-center py-12">
-        <div className="inline-block p-4 bg-eco-primary-100 rounded-full mb-6">
-          <Recycle className="w-16 h-16 text-eco-primary-600" />
+      {/* Hero Section with Squirrel */}
+      <section className="text-center py-12 relative">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-48 bg-gradient-to-b from-eco-primary-100 via-eco-teal-light/20 to-transparent rounded-full blur-3xl -z-10"></div>
+
+        <div className="flex justify-center items-center gap-6 mb-6">
+          <img src={squirrelLogo} alt="Black Squirrel Mascot" className="w-24 h-24 animate-bounce" style={{ animationDuration: '3s' }} />
+          <div className="inline-block p-4 bg-gradient-to-br from-eco-primary-200 to-eco-teal-light rounded-full shadow-lg">
+            <Recycle className="w-16 h-16 text-eco-primary-700" />
+          </div>
         </div>
-        <h1 className="text-5xl font-bold text-eco-primary-800 mb-4 font-display">
+
+        <h1 className="text-5xl font-bold bg-gradient-to-r from-eco-primary-700 via-eco-teal-dark to-eco-primary-800 bg-clip-text text-transparent mb-4 font-display">
           Welcome to the ReUSE Store
         </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+        <p className="text-xl text-gray-700 max-w-3xl mx-auto font-medium">
           Haverford College's sustainable solution for reducing waste and promoting reuse on campus
+        </p>
+        <p className="text-lg text-eco-primary-600 mt-2 font-semibold">
+          Home of the Black Squirrel Initiative
         </p>
       </section>
 
       {/* What is ReUSE Store */}
-      <section className="card max-w-4xl mx-auto">
+      <section className="card max-w-4xl mx-auto bg-gradient-to-br from-white via-eco-primary-50 to-eco-teal-light/20">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-eco-primary-100 rounded-lg">
-            <Heart className="w-8 h-8 text-eco-primary-600" />
+          <div className="p-3 bg-gradient-to-br from-eco-primary-200 to-eco-teal-light rounded-lg shadow-md">
+            <Heart className="w-8 h-8 text-eco-primary-700" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold text-eco-primary-800 mb-4">What is the ReUSE Store?</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-eco-primary-800 to-eco-teal-dark bg-clip-text text-transparent mb-4">What is the ReUSE Store?</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
               The ReUSE Store is Haverford College's sustainability initiative dedicated to reducing waste
               and promoting a circular economy on campus. We collect gently used items from students, faculty,
@@ -39,15 +49,15 @@ function AboutContent() {
 
       {/* How It Works */}
       <section className="max-w-4xl mx-auto">
-        <h2 className="text-3xl font-bold text-eco-primary-800 mb-8 text-center">How It Works</h2>
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-eco-primary-700 to-eco-teal-dark bg-clip-text text-transparent mb-8 text-center">How It Works</h2>
         <div className="grid md:grid-cols-2 gap-6">
           {/* Donating */}
-          <div className="card">
+          <div className="card bg-gradient-to-br from-eco-lime-light/30 to-eco-primary-100 border-2 border-eco-primary-300 hover:shadow-xl transition-all">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-eco-primary-100 rounded-lg">
-                <Recycle className="w-6 h-6 text-eco-primary-600" />
+              <div className="p-2 bg-gradient-to-br from-eco-primary-300 to-eco-lime-light rounded-lg shadow-md">
+                <Recycle className="w-6 h-6 text-eco-primary-700" />
               </div>
-              <h3 className="text-2xl font-bold text-eco-primary-700">Donating Items</h3>
+              <h3 className="text-2xl font-bold text-eco-primary-800">Donating Items</h3>
             </div>
             <ul className="space-y-3 text-gray-700">
               <li className="flex items-start gap-2">
@@ -70,12 +80,12 @@ function AboutContent() {
           </div>
 
           {/* Shopping */}
-          <div className="card">
+          <div className="card bg-gradient-to-br from-eco-teal-light/30 to-eco-primary-100 border-2 border-eco-teal-light hover:shadow-xl transition-all">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-eco-primary-100 rounded-lg">
-                <ShoppingBag className="w-6 h-6 text-eco-primary-600" />
+              <div className="p-2 bg-gradient-to-br from-eco-teal-light to-eco-primary-300 rounded-lg shadow-md">
+                <ShoppingBag className="w-6 h-6 text-eco-teal-dark" />
               </div>
-              <h3 className="text-2xl font-bold text-eco-primary-700">Shopping/Taking Items</h3>
+              <h3 className="text-2xl font-bold text-eco-teal-dark">Shopping/Taking Items</h3>
             </div>
             <ul className="space-y-3 text-gray-700">
               <li className="flex items-start gap-2">
@@ -100,16 +110,16 @@ function AboutContent() {
       </section>
 
       {/* Hours & Location */}
-      <section className="card max-w-4xl mx-auto bg-gradient-to-br from-eco-primary-50 to-white border-2 border-eco-primary-300">
-        <h2 className="text-3xl font-bold text-eco-primary-800 mb-6 text-center">Visit Us</h2>
+      <section className="card max-w-4xl mx-auto bg-gradient-to-br from-eco-primary-100 via-eco-teal-light/20 to-eco-lime-light/20 border-2 border-eco-primary-400 shadow-lg">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-eco-primary-700 to-eco-teal-dark bg-clip-text text-transparent mb-6 text-center">Visit Us</h2>
         <div className="grid md:grid-cols-2 gap-8">
           {/* Location */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-eco-primary-100 rounded-lg">
-                <MapPin className="w-6 h-6 text-eco-primary-600" />
+              <div className="p-2 bg-gradient-to-br from-eco-primary-300 to-eco-teal-light rounded-lg shadow-md">
+                <MapPin className="w-6 h-6 text-eco-primary-800" />
               </div>
-              <h3 className="text-xl font-bold text-eco-primary-700">Location</h3>
+              <h3 className="text-xl font-bold text-eco-primary-800">Location</h3>
             </div>
             <p className="text-gray-700">
               <strong>Haverford College</strong><br />
@@ -122,10 +132,10 @@ function AboutContent() {
           {/* Hours */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-eco-primary-100 rounded-lg">
-                <Clock className="w-6 h-6 text-eco-primary-600" />
+              <div className="p-2 bg-gradient-to-br from-eco-teal-light to-eco-primary-300 rounded-lg shadow-md">
+                <Clock className="w-6 h-6 text-eco-teal-dark" />
               </div>
-              <h3 className="text-xl font-bold text-eco-primary-700">Hours</h3>
+              <h3 className="text-xl font-bold text-eco-teal-dark">Hours</h3>
             </div>
             <div className="text-gray-700 space-y-1">
               <p><strong>Monday - Friday:</strong> 10:00 AM - 5:00 PM</p>
@@ -166,8 +176,8 @@ function AboutContent() {
       </section>
 
       {/* Environmental Impact */}
-      <section className="card max-w-4xl mx-auto bg-gradient-to-br from-eco-sky-light/20 to-eco-primary-50">
-        <h2 className="text-3xl font-bold text-eco-primary-800 mb-4 text-center">Our Environmental Impact</h2>
+      <section className="card max-w-4xl mx-auto bg-gradient-to-br from-eco-lime-light/30 via-eco-primary-100 to-eco-teal-light/30 border-2 border-eco-lime shadow-lg">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-eco-primary-700 via-eco-lime-dark to-eco-teal-dark bg-clip-text text-transparent mb-4 text-center">Our Environmental Impact</h2>
         <p className="text-gray-700 text-center max-w-2xl mx-auto mb-6">
           Every item reused is an item that doesn't end up in a landfill. Check out our{' '}
           <a href="/statistics" className="text-eco-primary-600 hover:text-eco-primary-700 font-semibold underline">

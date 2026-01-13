@@ -1,0 +1,3100 @@
+{
+  "items": [
+    {
+      "id": "item-001",
+      "sku": "APBL",
+      "name": "Blenders",
+      "description": "Blenders",
+      "quantity": 3,
+      "available": 2,
+      "status": "low-stock",
+      "categories": [
+        "Kitchen appliance",
+        "Household appliance"
+      ]
+    },
+    {
+      "id": "item-002",
+      "sku": "APCM",
+      "name": "Coffee Machines",
+      "description": "Coffee Machines",
+      "quantity": 10,
+      "available": 8,
+      "status": "available",
+      "categories": [
+        "Kitchen appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-003",
+      "sku": "APEK",
+      "name": "Electric Kettles",
+      "description": "Electric Kettles",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Kitchen appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-004",
+      "sku": "APFB",
+      "name": "Fans - Box",
+      "description": "Fans - Box",
+      "quantity": 5,
+      "available": 2,
+      "status": "low-stock",
+      "categories": [
+        "Household appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-005",
+      "sku": "APFD",
+      "name": "Fans - Desk",
+      "description": "Fans - Desk",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Household appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-006",
+      "sku": "APFF",
+      "name": "Fans - Floor",
+      "description": "Fans - Floor",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Household appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-007",
+      "sku": "APFP",
+      "name": "Food Processors",
+      "description": "Food Processors",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Kitchen appliance",
+        "Household appliance"
+      ]
+    },
+    {
+      "id": "item-008",
+      "sku": "APFR",
+      "name": "French Presses",
+      "description": "French Presses",
+      "quantity": 4,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Kitchen appliance"
+      ]
+    },
+    {
+      "id": "item-009",
+      "sku": "APFR",
+      "name": "Fridge",
+      "description": "Fridge",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Kitchen appliance"
+      ]
+    },
+    {
+      "id": "item-010",
+      "sku": "APHU",
+      "name": "Humidifiers",
+      "description": "Humidifiers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-011",
+      "sku": "APIM",
+      "name": "Ice Cream Makers",
+      "description": "Ice Cream Makers",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Kitchen appliance",
+        "Household appliance"
+      ]
+    },
+    {
+      "id": "item-012",
+      "sku": "APIR",
+      "name": "Irons",
+      "description": "Irons",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-013",
+      "sku": "APMI",
+      "name": "Microwaves",
+      "description": "Microwaves",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Kitchen appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-014",
+      "sku": "APPC",
+      "name": "Pressure Cookers",
+      "description": "Pressure Cookers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Kitchen appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-015",
+      "sku": "APSC",
+      "name": "Slow Cookers",
+      "description": "Slow Cookers",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Kitchen appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-016",
+      "sku": "APST",
+      "name": "Steamers",
+      "description": "Steamers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-017",
+      "sku": "APTO",
+      "name": "Toasters",
+      "description": "Toasters",
+      "quantity": 7,
+      "available": 5,
+      "status": "available",
+      "categories": [
+        "Kitchen appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-018",
+      "sku": "APWM",
+      "name": "Waffle Makers",
+      "description": "Waffle Makers",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Kitchen appliance",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-019",
+      "sku": "ARBE",
+      "name": "Beads",
+      "description": "Beads",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-020",
+      "sku": "ARCA",
+      "name": "Canvas",
+      "description": "Canvas",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-021",
+      "sku": "ARCH",
+      "name": "Craft Hardware",
+      "description": "Craft Hardware",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-022",
+      "sku": "ARCK",
+      "name": "Chalk",
+      "description": "Chalk",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-023",
+      "sku": "ARCP",
+      "name": "Colored Pencils",
+      "description": "Colored Pencils",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-024",
+      "sku": "ARCR",
+      "name": "Crayons",
+      "description": "Crayons",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-025",
+      "sku": "ARFA",
+      "name": "Fabric",
+      "description": "Fabric",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-026",
+      "sku": "ARGL",
+      "name": "Glitter",
+      "description": "Glitter",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-027",
+      "sku": "ARGP",
+      "name": "Gel Pens",
+      "description": "Gel Pens",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-028",
+      "sku": "ARMA",
+      "name": "Markers",
+      "description": "Markers",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-029",
+      "sku": "ARPA",
+      "name": "Paint",
+      "description": "Paint",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-030",
+      "sku": "ARPB",
+      "name": "Paint Brushes",
+      "description": "Paint Brushes",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-031",
+      "sku": "ARPO",
+      "name": "Pom-poms & Pipe Cleaners",
+      "description": "Pom-poms & Pipe Cleaners",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-032",
+      "sku": "ARPP",
+      "name": "Paper",
+      "description": "Paper",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-033",
+      "sku": "ARPS",
+      "name": "Painting Supplies",
+      "description": "Painting Supplies",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-034",
+      "sku": "ARPS",
+      "name": "Pastels",
+      "description": "Pastels",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-035",
+      "sku": "ARRI",
+      "name": "Ribbon",
+      "description": "Ribbon",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-036",
+      "sku": "ARSK",
+      "name": "Stickers",
+      "description": "Stickers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-037",
+      "sku": "ARSP",
+      "name": "Sketch Pads",
+      "description": "Sketch Pads",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-038",
+      "sku": "ARSS",
+      "name": "Sewing Supplies",
+      "description": "Sewing Supplies",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Art and Music Supplies"
+      ]
+    },
+    {
+      "id": "item-039",
+      "sku": "ARST",
+      "name": "Stationery",
+      "description": "Stationery",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-040",
+      "sku": "ARYA",
+      "name": "Yarn",
+      "description": "Yarn",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-041",
+      "sku": "BAAF",
+      "name": "Air Freshener",
+      "description": "Air Freshener",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-042",
+      "sku": "BAAN",
+      "name": "Antiseptic",
+      "description": "Antiseptic",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-043",
+      "sku": "BAAS",
+      "name": "Alcohol Swabs/Lens Wipes",
+      "description": "Alcohol Swabs/Lens Wipes",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-044",
+      "sku": "BABA",
+      "name": "Band-Aids",
+      "description": "Band-Aids",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-045",
+      "sku": "BABP",
+      "name": "Baby Powder",
+      "description": "Baby Powder",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-046",
+      "sku": "BABS",
+      "name": "Bug Spray",
+      "description": "Bug Spray",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-047",
+      "sku": "BABW",
+      "name": "Body Wash",
+      "description": "Body Wash",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-048",
+      "sku": "BACB",
+      "name": "Cotton Balls",
+      "description": "Cotton Balls",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-049",
+      "sku": "BACD",
+      "name": "Cough Drops",
+      "description": "Cough Drops",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-050",
+      "sku": "BACO",
+      "name": "Conditioner",
+      "description": "Conditioner",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-051",
+      "sku": "BACR",
+      "name": "Cotton Rounds",
+      "description": "Cotton Rounds",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-052",
+      "sku": "BACS",
+      "name": "Cotton Swabs",
+      "description": "Cotton Swabs",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-053",
+      "sku": "BACU",
+      "name": "Curlers",
+      "description": "Curlers",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-054",
+      "sku": "BADE",
+      "name": "Deodorant",
+      "description": "Deodorant",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-055",
+      "sku": "BAFL",
+      "name": "Floss",
+      "description": "Floss",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-056",
+      "sku": "BAFM",
+      "name": "Face Masks",
+      "description": "Face Masks",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-057",
+      "sku": "BAFW",
+      "name": "Face Wash",
+      "description": "Face Wash",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-058",
+      "sku": "BAHA",
+      "name": "Hair",
+      "description": "Hair",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-059",
+      "sku": "BAHA",
+      "name": "Hair Accessories",
+      "description": "Hair Accessories",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-060",
+      "sku": "BAHD",
+      "name": "Hair Dryers",
+      "description": "Hair Dryers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-061",
+      "sku": "BAHG",
+      "name": "Hair Gel",
+      "description": "Hair Gel",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-062",
+      "sku": "BAHS",
+      "name": "Hair Spray",
+      "description": "Hair Spray",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-063",
+      "sku": "BAHZ",
+      "name": "Hand Sanitizer",
+      "description": "Hand Sanitizer",
+      "quantity": 25,
+      "available": 25,
+      "status": "available",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-064",
+      "sku": "BAIP",
+      "name": "Ice Packs",
+      "description": "Ice Packs",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-065",
+      "sku": "BALI",
+      "name": "Liners",
+      "description": "Liners",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Feminine Care"
+      ]
+    },
+    {
+      "id": "item-066",
+      "sku": "BALO",
+      "name": "Lotion",
+      "description": "Lotion",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-067",
+      "sku": "BAMA",
+      "name": "Makeup",
+      "description": "Makeup",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-068",
+      "sku": "BAMW",
+      "name": "Mouth Wash",
+      "description": "Mouth Wash",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-069",
+      "sku": "BANF",
+      "name": "Nail File",
+      "description": "Nail File",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-070",
+      "sku": "BANK",
+      "name": "Nail Kit",
+      "description": "Nail Kit",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-071",
+      "sku": "BANP",
+      "name": "Nail Polish",
+      "description": "Nail Polish",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-072",
+      "sku": "BAOC",
+      "name": "Oral Care",
+      "description": "Oral Care",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-073",
+      "sku": "BAPA",
+      "name": "Pads",
+      "description": "Pads",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-074",
+      "sku": "BAPC",
+      "name": "Paper Cups",
+      "description": "Paper Cups",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-075",
+      "sku": "BAPE",
+      "name": "Perfume",
+      "description": "Perfume",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-076",
+      "sku": "BAPO",
+      "name": "Pill Organization",
+      "description": "Pill Organization",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-077",
+      "sku": "BAPT",
+      "name": "Paper Towels",
+      "description": "Paper Towels",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-078",
+      "sku": "BARA",
+      "name": "Razors",
+      "description": "Razors",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-079",
+      "sku": "BARB",
+      "name": "Razor Blades",
+      "description": "Razor Blades",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-080",
+      "sku": "BASC",
+      "name": "Scales",
+      "description": "Scales",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Household appliance",
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-081",
+      "sku": "BASC",
+      "name": "Shaving Cream",
+      "description": "Shaving Cream",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Household appliance",
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-082",
+      "sku": "BASD",
+      "name": "Shower Caddy",
+      "description": "Shower Caddy",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-083",
+      "sku": "BASH",
+      "name": "Shampoo",
+      "description": "Shampoo",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-084",
+      "sku": "BASO",
+      "name": "Soap",
+      "description": "Soap",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-085",
+      "sku": "BASP",
+      "name": "Soap Pump",
+      "description": "Soap Pump",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-086",
+      "sku": "BASS",
+      "name": "Sponges/Scrubbing",
+      "description": "Sponges/Scrubbing",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-087",
+      "sku": "BAST",
+      "name": "Straighteners",
+      "description": "Straighteners",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-088",
+      "sku": "BASU",
+      "name": "Sunscreen",
+      "description": "Sunscreen",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-089",
+      "sku": "BASV",
+      "name": "Shelving",
+      "description": "Shelving",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-090",
+      "sku": "BATA",
+      "name": "Tampons",
+      "description": "Tampons",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Feminine Care"
+      ]
+    },
+    {
+      "id": "item-091",
+      "sku": "BATB",
+      "name": "Tooth Brushes",
+      "description": "Tooth Brushes",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-092",
+      "sku": "BATD",
+      "name": "Tooth Brush Holder",
+      "description": "Tooth Brush Holder",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-093",
+      "sku": "BATH",
+      "name": "Thermometer",
+      "description": "Thermometer",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-094",
+      "sku": "BATI",
+      "name": "Tissues",
+      "description": "Tissues",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-095",
+      "sku": "BATL",
+      "name": "Face Tools",
+      "description": "Face Tools",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-096",
+      "sku": "BATO",
+      "name": "Tooth Paste",
+      "description": "Tooth Paste",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-097",
+      "sku": "BATP",
+      "name": "Toilet Paper",
+      "description": "Toilet Paper",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-098",
+      "sku": "BATR",
+      "name": "Travel Accessories",
+      "description": "Travel Accessories",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-099",
+      "sku": "BAVS",
+      "name": "Vitamins and Support",
+      "description": "Vitamins and Support",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-100",
+      "sku": "BAWA",
+      "name": "Waxing",
+      "description": "Waxing",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-101",
+      "sku": "BAWI",
+      "name": "Wipes",
+      "description": "Wipes",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-102",
+      "sku": "CJCO",
+      "name": "Costumes",
+      "description": "Costumes",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-103",
+      "sku": "CJDS",
+      "name": "Dress Shirt Collar Stays",
+      "description": "Dress Shirt Collar Stays",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-104",
+      "sku": "CJJC",
+      "name": "Jewelry Cleaning",
+      "description": "Jewelry Cleaning",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-105",
+      "sku": "CJPI",
+      "name": "Pins",
+      "description": "Pins",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-106",
+      "sku": "CJSG",
+      "name": "Sunglasses",
+      "description": "Sunglasses",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-107",
+      "sku": "CJSH",
+      "name": "Shoe Horn",
+      "description": "Shoe Horn",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-108",
+      "sku": "CJSI",
+      "name": "Shoe Inserts",
+      "description": "Shoe Inserts",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-109",
+      "sku": "CPBR",
+      "name": "Brushes",
+      "description": "Brushes",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-110",
+      "sku": "CPDI",
+      "name": "Disinfectant",
+      "description": "Disinfectant",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-111",
+      "sku": "CPDO",
+      "name": "Drain Opener",
+      "description": "Drain Opener",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-112",
+      "sku": "CPDS",
+      "name": "Dish Soap",
+      "description": "Dish Soap",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-113",
+      "sku": "CPDU",
+      "name": "Dusters",
+      "description": "Dusters",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-114",
+      "sku": "CPGL",
+      "name": "Gloves",
+      "description": "Gloves",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-115",
+      "sku": "CPHS",
+      "name": "Hand Soap",
+      "description": "Hand Soap",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Body and Hair Care"
+      ]
+    },
+    {
+      "id": "item-116",
+      "sku": "CPSB",
+      "name": "Scrub Brushes",
+      "description": "Scrub Brushes",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-117",
+      "sku": "CPSB",
+      "name": "Spray Bottles",
+      "description": "Spray Bottles",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-118",
+      "sku": "CPSP",
+      "name": "Sponges",
+      "description": "Sponges",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-119",
+      "sku": "CPSW",
+      "name": "Swiffers",
+      "description": "Swiffers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-120",
+      "sku": "CPTC",
+      "name": "Toilet Cleaner",
+      "description": "Toilet Cleaner",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-121",
+      "sku": "DEMI",
+      "name": "Mirrors",
+      "description": "Mirrors",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Mirrors"
+      ]
+    },
+    {
+      "id": "item-122",
+      "sku": "DEPF",
+      "name": "Picture Frames",
+      "description": "Picture Frames",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-123",
+      "sku": "DEPL",
+      "name": "Planters",
+      "description": "Planters",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-124",
+      "sku": "DETC",
+      "name": "Tchotchkes",
+      "description": "Tchotchkes",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-125",
+      "sku": "DEVA",
+      "name": "Vases",
+      "description": "Vases",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-126",
+      "sku": "DEWA",
+      "name": "Wall Art",
+      "description": "Wall Art",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-127",
+      "sku": "ELAC",
+      "name": "Alarm Clocks",
+      "description": "Alarm Clocks",
+      "quantity": 8,
+      "available": 7,
+      "status": "available",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-128",
+      "sku": "ELCC",
+      "name": "Computer Chargers",
+      "description": "Computer Chargers",
+      "quantity": 17,
+      "available": 14,
+      "status": "available",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-129",
+      "sku": "ELEC",
+      "name": "Extension Cords",
+      "description": "Extension Cords",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-130",
+      "sku": "ELFD",
+      "name": "Flash Drives",
+      "description": "Flash Drives",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-131",
+      "sku": "ELFL",
+      "name": "Flashlights",
+      "description": "Flashlights",
+      "quantity": 8,
+      "available": 8,
+      "status": "available",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-132",
+      "sku": "ELIC",
+      "name": "IPad Cases",
+      "description": "IPad Cases",
+      "quantity": 5,
+      "available": 5,
+      "status": "available",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-133",
+      "sku": "ELPA",
+      "name": "Phone Accessories",
+      "description": "Phone Accessories",
+      "quantity": 80,
+      "available": 80,
+      "status": "available",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-134",
+      "sku": "ELPB",
+      "name": "Power Blocks",
+      "description": "Power Blocks",
+      "quantity": 18,
+      "available": 18,
+      "status": "available",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-135",
+      "sku": "ELPC",
+      "name": "Phone Chargers",
+      "description": "Phone Chargers",
+      "quantity": 65,
+      "available": 65,
+      "status": "available",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-136",
+      "sku": "ELPS",
+      "name": "#N/A",
+      "description": "#N/A",
+      "quantity": 0,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-137",
+      "sku": "ELTV",
+      "name": "TV/Monitor",
+      "description": "TV/Monitor",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-138",
+      "sku": "ENBG",
+      "name": "Board Games",
+      "description": "Board Games",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-139",
+      "sku": "ENBO",
+      "name": "Books",
+      "description": "Books",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-140",
+      "sku": "ENCD",
+      "name": "CDs",
+      "description": "CDs",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-141",
+      "sku": "ENDV",
+      "name": "DVDs",
+      "description": "DVDs",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-142",
+      "sku": "ENPG",
+      "name": "Party Games",
+      "description": "Party Games",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-143",
+      "sku": "ENRE",
+      "name": "Records",
+      "description": "Records",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-144",
+      "sku": "FUBR",
+      "name": "Bed Risers",
+      "description": "Bed Risers",
+      "quantity": 42,
+      "available": 36,
+      "status": "available",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-145",
+      "sku": "FUCH",
+      "name": "Chairs",
+      "description": "Chairs",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-146",
+      "sku": "FUSH",
+      "name": "Shelves",
+      "description": "Shelves",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-147",
+      "sku": "FUSR",
+      "name": "Shoe Racks",
+      "description": "Shoe Racks",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-148",
+      "sku": "FUTA",
+      "name": "Table",
+      "description": "Table",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-149",
+      "sku": "HICS",
+      "name": "Command Strips",
+      "description": "Command Strips",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-150",
+      "sku": "HITO",
+      "name": "Tools",
+      "description": "Tools",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-151",
+      "sku": "KIAF",
+      "name": "Aluminum Foil",
+      "description": "Aluminum Foil",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-152",
+      "sku": "KIBA",
+      "name": "Barware",
+      "description": "Barware",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-153",
+      "sku": "KIBO",
+      "name": "Bottles",
+      "description": "Bottles",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-154",
+      "sku": "KIBP",
+      "name": "Baking Pans",
+      "description": "Baking Pans",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-155",
+      "sku": "KIBW",
+      "name": "Bowls",
+      "description": "Bowls",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-156",
+      "sku": "KICA",
+      "name": "Can Openers",
+      "description": "Can Openers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-157",
+      "sku": "KICB",
+      "name": "Corkscrews & Bottle Openers",
+      "description": "Corkscrews & Bottle Openers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-158",
+      "sku": "KICF",
+      "name": "Coffee",
+      "description": "Coffee",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-159",
+      "sku": "KICH",
+      "name": "Chopsticks",
+      "description": "Chopsticks",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-160",
+      "sku": "KICO",
+      "name": "Colanders",
+      "description": "Colanders",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-161",
+      "sku": "KICS",
+      "name": "Coasters",
+      "description": "Coasters",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-162",
+      "sku": "KICT",
+      "name": "Cutting Boards",
+      "description": "Cutting Boards",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-163",
+      "sku": "KICU",
+      "name": "Cups",
+      "description": "Cups",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-164",
+      "sku": "KIDD",
+      "name": "Dish Drain",
+      "description": "Dish Drain",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-165",
+      "sku": "KIFI",
+      "name": "Filters",
+      "description": "Filters",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-166",
+      "sku": "KIFO",
+      "name": "Forks",
+      "description": "Forks",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-167",
+      "sku": "KIGL",
+      "name": "Glasses",
+      "description": "Glasses",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-168",
+      "sku": "KIGR",
+      "name": "Graters",
+      "description": "Graters",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-169",
+      "sku": "KIIC",
+      "name": "Ice Cube Trays",
+      "description": "Ice Cube Trays",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-170",
+      "sku": "KIJA",
+      "name": "Bottles/Jars/Misc",
+      "description": "Bottles/Jars/Misc",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-171",
+      "sku": "KIKK",
+      "name": "Knives (Kitchen)",
+      "description": "Knives (Kitchen)",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-172",
+      "sku": "KIKS",
+      "name": "Knives (Silverware)",
+      "description": "Knives (Silverware)",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-173",
+      "sku": "KIMB",
+      "name": "Mixing Bowls",
+      "description": "Mixing Bowls",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-174",
+      "sku": "KIME",
+      "name": "Measuring",
+      "description": "Measuring",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-175",
+      "sku": "KIMU",
+      "name": "Mugs",
+      "description": "Mugs",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-176",
+      "sku": "KIPA",
+      "name": "Pans",
+      "description": "Pans",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-177",
+      "sku": "KIPE",
+      "name": "Peelers",
+      "description": "Peelers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-178",
+      "sku": "KIPI",
+      "name": "Pint",
+      "description": "Pint",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-179",
+      "sku": "KIPL",
+      "name": "Plates",
+      "description": "Plates",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-180",
+      "sku": "KIPO",
+      "name": "Pots",
+      "description": "Pots",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-181",
+      "sku": "KIPT",
+      "name": "Pitchers",
+      "description": "Pitchers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-182",
+      "sku": "KIPW",
+      "name": "Plastic Wrap",
+      "description": "Plastic Wrap",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-183",
+      "sku": "KIPY",
+      "name": "Pyrex",
+      "description": "Pyrex",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-184",
+      "sku": "KISH",
+      "name": "Shot",
+      "description": "Shot",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-185",
+      "sku": "KISI",
+      "name": "Spoons (Silverware)",
+      "description": "Spoons (Silverware)",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-186",
+      "sku": "KISP",
+      "name": "Spatulas",
+      "description": "Spatulas",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-187",
+      "sku": "KISS",
+      "name": "Spoons (Serving)",
+      "description": "Spoons (Serving)",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-188",
+      "sku": "KIST",
+      "name": "Strainers",
+      "description": "Strainers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-189",
+      "sku": "KITE",
+      "name": "Tea",
+      "description": "Tea",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-190",
+      "sku": "KITO",
+      "name": "Tongs",
+      "description": "Tongs",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-191",
+      "sku": "KIUT",
+      "name": "Utensils",
+      "description": "Utensils",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-192",
+      "sku": "KIWH",
+      "name": "#N/A",
+      "description": "#N/A",
+      "quantity": 0,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-193",
+      "sku": "KIWI",
+      "name": "#N/A",
+      "description": "#N/A",
+      "quantity": 0,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-194",
+      "sku": "KIWP",
+      "name": "Wax Paper",
+      "description": "Wax Paper",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-195",
+      "sku": "KIWS",
+      "name": "Wisks",
+      "description": "Wisks",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-196",
+      "sku": "KIZI",
+      "name": "Ziplocs",
+      "description": "Ziplocs",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-197",
+      "sku": "LABA",
+      "name": "Baskets",
+      "description": "Baskets",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-198",
+      "sku": "LADE",
+      "name": "Detergent",
+      "description": "Detergent",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Laundry"
+      ]
+    },
+    {
+      "id": "item-199",
+      "sku": "LADR",
+      "name": "Drying Rack",
+      "description": "Drying Rack",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Laundry"
+      ]
+    },
+    {
+      "id": "item-200",
+      "sku": "LADS",
+      "name": "Dryer Sheets",
+      "description": "Dryer Sheets",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-201",
+      "sku": "LAHA",
+      "name": "Hampers",
+      "description": "Hampers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Laundry"
+      ]
+    },
+    {
+      "id": "item-202",
+      "sku": "LAIB",
+      "name": "Ironing Board",
+      "description": "Ironing Board",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-203",
+      "sku": "LALR",
+      "name": "Lint Roller",
+      "description": "Lint Roller",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Laundry"
+      ]
+    },
+    {
+      "id": "item-204",
+      "sku": "LASG",
+      "name": "Static Guard",
+      "description": "Static Guard",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Laundry"
+      ]
+    },
+    {
+      "id": "item-205",
+      "sku": "LASR",
+      "name": "Stain Remover",
+      "description": "Stain Remover",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Laundry"
+      ]
+    },
+    {
+      "id": "item-206",
+      "sku": "LIDL",
+      "name": "Desk Lamp",
+      "description": "Desk Lamp",
+      "quantity": 18,
+      "available": 3,
+      "status": "available",
+      "categories": [
+        "Lamps",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-207",
+      "sku": "LIFA",
+      "name": "Fairy Lights",
+      "description": "Fairy Lights",
+      "quantity": 11,
+      "available": 7,
+      "status": "available",
+      "categories": [
+        "Lamps",
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-208",
+      "sku": "LIFL",
+      "name": "Floor Lamp",
+      "description": "Floor Lamp",
+      "quantity": 2,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Lamps",
+        "Electronics"
+      ]
+    },
+    {
+      "id": "item-209",
+      "sku": "LIHL",
+      "name": "Holiday Lights",
+      "description": "Holiday Lights",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Lamps",
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-210",
+      "sku": "LILI",
+      "name": "Lightbulbs",
+      "description": "Lightbulbs",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-211",
+      "sku": "MIHO",
+      "name": "Holiday",
+      "description": "Holiday",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-212",
+      "sku": "MINA",
+      "name": "Napkins",
+      "description": "Napkins",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-213",
+      "sku": "MIUM",
+      "name": "Umbrellas",
+      "description": "Umbrellas",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-214",
+      "sku": "OFBC",
+      "name": "Binder Clips",
+      "description": "Binder Clips",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-215",
+      "sku": "OFBI",
+      "name": "Binders",
+      "description": "Binders",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-216",
+      "sku": "OFCA",
+      "name": "Calculators",
+      "description": "Calculators",
+      "quantity": 2,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Electronics",
+        "Other"
+      ]
+    },
+    {
+      "id": "item-217",
+      "sku": "OFCB",
+      "name": "Cork Boards",
+      "description": "Cork Boards",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-218",
+      "sku": "OFEM",
+      "name": "Expo Markers",
+      "description": "Expo Markers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-219",
+      "sku": "OFER",
+      "name": "Erasers",
+      "description": "Erasers",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-220",
+      "sku": "OFFO",
+      "name": "Folders",
+      "description": "Folders",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-221",
+      "sku": "OFGL",
+      "name": "Glue",
+      "description": "Glue",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-222",
+      "sku": "OFHI",
+      "name": "Highlighters",
+      "description": "Highlighters",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-223",
+      "sku": "OFHP",
+      "name": "Hole punches - one hole",
+      "description": "Hole punches - one hole",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-224",
+      "sku": "OFHP",
+      "name": "Hole punches - three holes",
+      "description": "Hole punches - three holes",
+      "quantity": 9,
+      "available": 9,
+      "status": "available",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-225",
+      "sku": "OFHP",
+      "name": "Hole punches - two holes",
+      "description": "Hole punches - two holes",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-226",
+      "sku": "OFIC",
+      "name": "Index Cards",
+      "description": "Index Cards",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-227",
+      "sku": "OFNO",
+      "name": "Notebooks/journals/planners",
+      "description": "Notebooks/journals/planners",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-228",
+      "sku": "OFPA",
+      "name": "Paper",
+      "description": "Paper",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-229",
+      "sku": "OFPC",
+      "name": "Paper Clips",
+      "description": "Paper Clips",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-230",
+      "sku": "OFPE",
+      "name": "Pencils",
+      "description": "Pencils",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-231",
+      "sku": "OFPN",
+      "name": "Pens",
+      "description": "Pens",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-232",
+      "sku": "OFPP",
+      "name": "Push Pins",
+      "description": "Push Pins",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-233",
+      "sku": "OFRB",
+      "name": "Rubber Bands",
+      "description": "Rubber Bands",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-234",
+      "sku": "OFRU",
+      "name": "Rulers",
+      "description": "Rulers",
+      "quantity": 7,
+      "available": 7,
+      "status": "available",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-235",
+      "sku": "OFSC",
+      "name": "Scissors",
+      "description": "Scissors",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-236",
+      "sku": "OFSH",
+      "name": "Sharpies",
+      "description": "Sharpies",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-237",
+      "sku": "OFSN",
+      "name": "Sticky Notes",
+      "description": "Sticky Notes",
+      "quantity": 43,
+      "available": 39,
+      "status": "available",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-238",
+      "sku": "OFSR",
+      "name": "Staple remover",
+      "description": "Staple remover",
+      "quantity": 5,
+      "available": 5,
+      "status": "available",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-239",
+      "sku": "OFSS",
+      "name": "Staples",
+      "description": "Staples",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-240",
+      "sku": "OFST",
+      "name": "Stapler",
+      "description": "Stapler",
+      "quantity": 2,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-241",
+      "sku": "OFTA",
+      "name": "Tape",
+      "description": "Tape",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-242",
+      "sku": "OFWB",
+      "name": "White Board",
+      "description": "White Board",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-243",
+      "sku": "OFWO",
+      "name": "White Out",
+      "description": "White Out",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-244",
+      "sku": "SPEX",
+      "name": "Exercise",
+      "description": "Exercise",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-245",
+      "sku": "SPYO",
+      "name": "Yoga",
+      "description": "Yoga",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-246",
+      "sku": "STBI",
+      "name": "Bins",
+      "description": "Bins",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-247",
+      "sku": "STDS",
+      "name": "Desktop Storage",
+      "description": "Desktop Storage",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-248",
+      "sku": "STDU",
+      "name": "Drawer Units",
+      "description": "Drawer Units",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-249",
+      "sku": "STHA",
+      "name": "Hangers",
+      "description": "Hangers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-250",
+      "sku": "STHO",
+      "name": "Hooks",
+      "description": "Hooks",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-251",
+      "sku": "STSC",
+      "name": "Storage Containers (Tupperwares)",
+      "description": "Storage Containers (Tupperwares)",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-252",
+      "sku": "STTB",
+      "name": "Trash Bags",
+      "description": "Trash Bags",
+      "quantity": 4,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-253",
+      "sku": "STTC",
+      "name": "Trash Cans",
+      "description": "Trash Cans",
+      "quantity": 2,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    },
+    {
+      "id": "item-254",
+      "sku": "STTO",
+      "name": "Totes",
+      "description": "Totes",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-255",
+      "sku": "STTU",
+      "name": "Tubs",
+      "description": "Tubs",
+      "quantity": 1,
+      "available": 1,
+      "status": "low-stock",
+      "categories": [
+        "Decorations and Dorm Supplies"
+      ]
+    },
+    {
+      "id": "item-256",
+      "sku": "STUO",
+      "name": "Utensil Organizers",
+      "description": "Utensil Organizers",
+      "quantity": 1,
+      "available": 0,
+      "status": "out-of-stock",
+      "categories": [
+        "Other"
+      ]
+    }
+  ],
+  "lastUpdated": "2026-01-13",
+  "totalItems": 256,
+  "availableItems": 110
+}
