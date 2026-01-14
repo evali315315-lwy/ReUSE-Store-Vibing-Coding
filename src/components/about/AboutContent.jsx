@@ -66,15 +66,11 @@ function AboutContent() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-eco-primary-500 font-bold mt-1">•</span>
-                <span>Accepted items include: furniture, kitchen supplies, school supplies, decor, clothing, and more</span>
+                <span>Accepted items include: hangers, fans, kitchen goods, lamps, minifridges and small appliances, new toiletries, office goods, and much more!</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-eco-primary-500 font-bold mt-1">•</span>
                 <span>Our student workers will log your donation and ensure it finds a new home</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-eco-primary-500 font-bold mt-1">•</span>
-                <span>All donations are tax-deductible upon request</span>
               </li>
             </ul>
           </div>
@@ -109,6 +105,98 @@ function AboutContent() {
         </div>
       </section>
 
+      {/* What We Accept / Don't Accept */}
+      <section className="max-w-4xl mx-auto">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-eco-primary-700 to-eco-teal-dark bg-clip-text text-transparent mb-8 text-center">Accepted & Non-Accepted Items</h2>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* What We Accept */}
+          <div className="card bg-gradient-to-br from-eco-primary-100 to-eco-lime-light/30 border-2 border-eco-primary-400">
+            <h3 className="text-2xl font-bold text-eco-primary-800 mb-4 flex items-center gap-2">
+              <span className="text-3xl">✅</span> We Accept
+            </h3>
+            <ul className="space-y-2 text-gray-700">
+              <li className="flex items-start gap-2">
+                <span className="text-eco-primary-500 font-bold mt-1">•</span>
+                <span>Hangers</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-eco-primary-500 font-bold mt-1">•</span>
+                <span>Fans</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-eco-primary-500 font-bold mt-1">•</span>
+                <span>Kitchen Goods</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-eco-primary-500 font-bold mt-1">•</span>
+                <span>Lamps</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-eco-primary-500 font-bold mt-1">•</span>
+                <span>Minifridges and Small Appliances</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-eco-primary-500 font-bold mt-1">•</span>
+                <span>New Toiletries</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-eco-primary-500 font-bold mt-1">•</span>
+                <span>Office Goods</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-eco-primary-500 font-bold mt-1">•</span>
+                <span className="font-semibold">So much more!!</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* What We Don't Accept */}
+          <div className="card bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-200">
+            <h3 className="text-2xl font-bold text-red-700 mb-4 flex items-center gap-2">
+              <span className="text-3xl">❌</span> We Don't Accept
+            </h3>
+            <ul className="space-y-2 text-gray-700">
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Broken items</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Clothing and soft goods (towels, bedding, etc.)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Dirty items</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Opened/Used toiletries</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Large furniture</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Mattress pads</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Nonperishable food</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Rugs</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold mt-1">•</span>
+                <span>Trash</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* Hours & Location */}
       <section className="card max-w-4xl mx-auto bg-gradient-to-br from-eco-primary-100 via-eco-teal-light/20 to-eco-lime-light/20 border-2 border-eco-primary-400 shadow-lg">
         <h2 className="text-3xl font-bold bg-gradient-to-r from-eco-primary-700 to-eco-teal-dark bg-clip-text text-transparent mb-6 text-center">Visit Us</h2>
@@ -123,7 +211,7 @@ function AboutContent() {
             </div>
             <p className="text-gray-700">
               <strong>Haverford College</strong><br />
-              Campus Center, Lower Level<br />
+              Comfort Hall, Basement<br />
               370 Lancaster Avenue<br />
               Haverford, PA 19041
             </p>
@@ -138,9 +226,9 @@ function AboutContent() {
               <h3 className="text-xl font-bold text-eco-teal-dark">Hours</h3>
             </div>
             <div className="text-gray-700 space-y-1">
-              <p><strong>Monday - Friday:</strong> 10:00 AM - 5:00 PM</p>
-              <p><strong>Saturday:</strong> 12:00 PM - 4:00 PM</p>
-              <p><strong>Sunday:</strong> Closed</p>
+              <p><strong>Tuesday:</strong> 3:00 PM - 5:00 PM</p>
+              <p><strong>Friday:</strong> 1:00 PM - 3:00 PM</p>
+              <p><strong>Saturday:</strong> 9:00 AM - 11:00 AM</p>
               <p className="text-sm text-eco-primary-600 mt-3">
                 *Hours may vary during breaks and exam periods
               </p>

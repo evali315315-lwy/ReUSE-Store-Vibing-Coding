@@ -8,6 +8,7 @@ import Statistics from './pages/Statistics';
 import Donations from './pages/Donations';
 import PhotoVerification from './pages/PhotoVerification';
 import DatabaseViewer from './pages/DatabaseViewer';
+import FridgeInventory from './pages/FridgeInventory';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
             {/* Admin Routes */}
             <Route path="verification" element={<PhotoVerification />} />
             <Route path="database" element={<DatabaseViewer />} />
+            <Route path="fridges" element={<FridgeInventory />} />
           </Route>
         </Routes>
       </VersionProvider>
