@@ -6,7 +6,7 @@ import axios from 'axios';
  */
 
 const USE_NEW_BACKEND = import.meta.env.VITE_USE_NEW_BACKEND === 'true';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
 
 /**

@@ -162,32 +162,48 @@ To add new admins, update the `VITE_ADMIN_EMAILS` environment variable.
 
 ## 🚢 Deployment
 
-### Deploy to Vercel (Recommended)
+### Quick Deployment Guide
 
-1. **Push your code to GitHub**
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
+This is a full-stack application with:
+- **Frontend**: React + Vite (deploy to Vercel)
+- **Backend**: Express API + SQLite (deploy to Render)
 
-2. **Deploy to Vercel**:
-   - Go to https://vercel.com
-   - Import your GitHub repository
-   - Add environment variables in the Vercel dashboard
+**See [DEPLOYMENT_SUMMARY.md](DEPLOYMENT_SUMMARY.md) for quick overview or [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete step-by-step instructions.**
+
+### Quick Steps
+
+1. **Deploy Backend to Render** (5 minutes)
+   - Sign up at https://render.com/register
+   - Create new Web Service from GitHub
+   - Use `npm run server` as start command
+   - Copy your API URL
+
+2. **Deploy Frontend to Vercel** (3 minutes)
+   - Sign up at https://vercel.com/signup
+   - Import GitHub repository
+   - Add environment variables (including your Render API URL)
    - Deploy
 
-### Deploy to Netlify
+3. **Configure**
+   - Update CORS in [server/index.js](server/index.js) with your Vercel URL
+   - Add Vercel domain to Firebase authorized domains
+   - Test all features
 
-1. **Build the project**:
-   ```bash
-   npm run build
-   ```
+### Local Development
 
-2. **Deploy**:
-   - Go to https://netlify.com
-   - Drag and drop the `dist` folder
-   - Or connect to GitHub for automatic deployments
+Run both frontend and backend:
+```bash
+./start-dev.sh
+```
+
+Or manually:
+```bash
+# Terminal 1 - Backend
+npm run server
+
+# Terminal 2 - Frontend
+npm run dev
+```
 
 ## 📝 Available Scripts
 
