@@ -156,20 +156,33 @@ app.get('/api/verification/checkouts', (req, res) => {
 
     const checkouts = db.prepare(checkoutsQuery).all(...itemParams, limit, offset);
 
-    // For each checkout, get all its items
-    const checkoutsWithItems = checkouts.map(checkout => {
-      const items = db.prepare(`
+    // Get all items for these checkouts in a single query (optimized - reduces N+1 queries)
+    let checkoutsWithItems = [];
+    if (checkouts.length > 0) {
+      const checkoutIds = checkouts.map(c => c.id);
+      const placeholders = checkoutIds.map(() => '?').join(',');
+      const allItems = db.prepare(`
         SELECT * FROM items
-        WHERE checkout_id = ?
-        ORDER BY id ASC
-      `).all(checkout.id);
+        WHERE checkout_id IN (${placeholders})
+        ORDER BY checkout_id ASC, id ASC
+      `).all(...checkoutIds);
 
-      return {
+      // Group items by checkout_id
+      const itemsByCheckout = {};
+      allItems.forEach(item => {
+        if (!itemsByCheckout[item.checkout_id]) {
+          itemsByCheckout[item.checkout_id] = [];
+        }
+        itemsByCheckout[item.checkout_id].push(item);
+      });
+
+      // Attach items to checkouts
+      checkoutsWithItems = checkouts.map(checkout => ({
         ...checkout,
-        items,
-        totalItems: items.length
-      };
-    });
+        items: itemsByCheckout[checkout.id] || [],
+        totalItems: (itemsByCheckout[checkout.id] || []).length
+      }));
+    }
 
     // Get stats (count of unique checkout sessions that need approval - all years)
     const stats = {
