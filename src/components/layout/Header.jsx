@@ -92,20 +92,34 @@ function Header() {
               </NavLink>
             )}
 
-            {/* Admin Tab - Only visible for admin version */}
+            {/* Admin Tabs - Only visible for admin version */}
             {version === 'admin' && (
-              <NavLink
-                to="/verification"
-                className={({ isActive }) =>
-                  `px-4 py-2 rounded-md font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-white text-eco-primary-600'
-                      : 'hover:bg-eco-primary-500'
-                  }`
-                }
-              >
-                Photo Verification
-              </NavLink>
+              <>
+                <NavLink
+                  to="/verification"
+                  className={({ isActive }) =>
+                    `px-4 py-2 rounded-md font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-white text-eco-primary-600'
+                        : 'hover:bg-eco-primary-500'
+                    }`
+                  }
+                >
+                  Photo Verification
+                </NavLink>
+                <NavLink
+                  to="/database"
+                  className={({ isActive }) =>
+                    `px-4 py-2 rounded-md font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-white text-eco-primary-600'
+                        : 'hover:bg-eco-primary-500'
+                    }`
+                  }
+                >
+                  Database
+                </NavLink>
+              </>
             )}
 
             {/* Version Switcher Dropdown */}
