@@ -132,7 +132,9 @@ app.get('/api/verification/checkouts', (req, res) => {
       itemParams.push(oneMonthAgo.toISOString());
     }
 
-    let checkoutWhere = [];
+    let checkoutWhere = ['checkouts.needs_approval = 1']; // Only show checkouts flagged for approval
+
+    // Respect the year parameter if provided (show all years by default)
     if (year) {
       checkoutWhere.push('checkouts.year_range = ?');
       itemParams.push(year);
@@ -147,7 +149,7 @@ app.get('/api/verification/checkouts', (req, res) => {
       FROM checkouts
       JOIN items ON checkouts.id = items.checkout_id
       ${checkoutWhereClause}
-      ${checkoutWhere.length > 0 ? 'AND' : 'WHERE'} ${itemWhereClause}
+      AND ${itemWhereClause}
       ORDER BY checkouts.date DESC, checkouts.id DESC
       LIMIT ? OFFSET ?
     `;
@@ -169,17 +171,34 @@ app.get('/api/verification/checkouts', (req, res) => {
       };
     });
 
-    // Get stats (count of unique checkout sessions)
+    // Get stats (count of unique checkout sessions that need approval - all years)
     const stats = {
-      pending: db.prepare('SELECT COUNT(DISTINCT checkout_id) as count FROM items WHERE verification_status = ?').get('pending').count,
+      pending: db.prepare(`
+        SELECT COUNT(DISTINCT items.checkout_id) as count
+        FROM items
+        JOIN checkouts ON items.checkout_id = checkouts.id
+        WHERE items.verification_status = ?
+        AND checkouts.needs_approval = 1
+      `).get('pending').count,
       approved: (() => {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        return db.prepare(
-          'SELECT COUNT(DISTINCT checkout_id) as count FROM items WHERE verification_status = ? AND verified_at >= datetime(?)'
-        ).get('approved', oneMonthAgo.toISOString()).count;
+        return db.prepare(`
+          SELECT COUNT(DISTINCT items.checkout_id) as count
+          FROM items
+          JOIN checkouts ON items.checkout_id = checkouts.id
+          WHERE items.verification_status = ?
+          AND items.verified_at >= datetime(?)
+          AND checkouts.needs_approval = 1
+        `).get('approved', oneMonthAgo.toISOString()).count;
       })(),
-      flagged: db.prepare('SELECT COUNT(DISTINCT checkout_id) as count FROM items WHERE verification_status = ?').get('flagged').count
+      flagged: db.prepare(`
+        SELECT COUNT(DISTINCT items.checkout_id) as count
+        FROM items
+        JOIN checkouts ON items.checkout_id = checkouts.id
+        WHERE items.verification_status = ?
+        AND checkouts.needs_approval = 1
+      `).get('flagged').count
     };
 
     res.json({
@@ -567,7 +586,7 @@ app.post('/api/products', (req, res) => {
     const month = now.getMonth();
     const yearRange = month >= 7 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
 
-    // Insert checkout
+    // Insert checkout (with needs_approval flag set to 1 for photo verification)
     const checkoutResult = db.prepare(`
       INSERT INTO checkouts (
         date,
@@ -575,15 +594,17 @@ app.post('/api/products', (req, res) => {
         email,
         housing_assignment,
         graduation_year,
-        year_range
-      ) VALUES (?, ?, ?, ?, ?, ?)
+        year_range,
+        needs_approval
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       new Date().toISOString(),
       donorName,
       email,
       housing || '',
       gradYear || '',
-      yearRange
+      yearRange,
+      1  // Set needs_approval = 1 for new donations
     );
 
     const checkoutId = checkoutResult.lastInsertRowid;
