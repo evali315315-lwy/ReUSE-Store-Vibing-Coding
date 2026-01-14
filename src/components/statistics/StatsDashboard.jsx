@@ -97,62 +97,43 @@ function StatsDashboard() {
         <h3 className="text-2xl font-bold text-eco-primary-800 mb-6">
           CO₂ Emissions Saved Over Time
         </h3>
-        <div className="h-64 flex items-end justify-around gap-4">
-          {data.map((year) => (
-            <div key={year.year} className="flex-1 flex flex-col items-center">
-              <div
-                className="w-full bg-gradient-to-t from-eco-primary-500 to-eco-primary-300 rounded-t-lg transition-all hover:from-eco-primary-600 hover:to-eco-primary-400"
-                style={{
-                  height: `${(year.co2Saved / Math.max(...data.map(d => d.co2Saved))) * 100}%`,
-                  minHeight: '40px'
-                }}
-              >
-                <div className="text-center pt-2">
-                  <p className="text-white font-bold text-sm">
+        <div className="flex items-end justify-around gap-4 px-4" style={{ height: '320px' }}>
+          {data.map((year) => {
+            const maxCO2 = Math.max(...data.map(d => d.co2Saved));
+            const heightPx = (year.co2Saved / maxCO2) * 280; // 280px max height to leave room for labels
+
+            return (
+              <div key={year.year} className="flex-1 flex flex-col items-center justify-end">
+                <div
+                  className="w-full bg-gradient-to-t from-eco-primary-500 to-eco-primary-300 rounded-t-lg transition-all hover:from-eco-primary-600 hover:to-eco-primary-400 flex items-start justify-center"
+                  style={{
+                    height: `${heightPx}px`
+                  }}
+                >
+                  <p className="text-white font-bold text-sm pt-2">
                     {year.co2Saved.toLocaleString()}
                   </p>
                 </div>
+                <p className="mt-3 text-gray-700 font-semibold">{year.year}</p>
               </div>
-              <p className="mt-2 text-gray-700 font-semibold">{year.year}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Impact Statement */}
       <div className="card bg-gradient-to-br from-eco-primary-50 to-eco-sky-light/20 border-2 border-eco-primary-300">
-        <div className="text-center">
-          <h3 className="text-2xl font-bold text-eco-primary-800 mb-4">
-            What This Means
+        <div className="max-w-4xl mx-auto">
+          <h3 className="text-2xl font-bold text-eco-primary-800 mb-4 text-center">
+            Understanding Our Environmental Impact
           </h3>
-          <div className="grid md:grid-cols-3 gap-6 text-center">
-            <div className="p-4">
-              <p className="text-5xl mb-2">🌳</p>
-              <p className="text-3xl font-bold text-eco-primary-600 mb-2">
-                {Math.round(totalCO2 / 50)}
-              </p>
-              <p className="text-sm text-gray-700 font-semibold">
-                Trees' worth of CO₂ absorbed
-              </p>
-            </div>
-            <div className="p-4">
-              <p className="text-5xl mb-2">🚗</p>
-              <p className="text-3xl font-bold text-eco-primary-600 mb-2">
-                {Math.round(totalCO2 / 0.404)}
-              </p>
-              <p className="text-sm text-gray-700 font-semibold">
-                Miles not driven
-              </p>
-            </div>
-            <div className="p-4">
-              <p className="text-5xl mb-2">💡</p>
-              <p className="text-3xl font-bold text-eco-primary-600 mb-2">
-                {Math.round(totalWeight / 10)}
-              </p>
-              <p className="text-sm text-gray-700 font-semibold">
-                Households' waste for a month
-              </p>
-            </div>
+          <div className="space-y-4 text-gray-700 leading-relaxed">
+            <p className="text-base">
+              Our CO₂ emissions calculations are based on the total weight of items diverted from landfills, using the EPA's Waste Reduction Model. For every pound of material reused instead of discarded, we estimate <span className="font-semibold text-eco-primary-700">0.85 pounds of CO₂ emissions saved</span>. This accounts for the avoided manufacturing emissions that would have been generated to produce replacement items. Since 2021, by keeping over <span className="font-semibold text-eco-primary-700">{totalWeight.toLocaleString()} pounds</span> of goods in circulation, the ReUSE Store community has collectively prevented approximately <span className="font-semibold text-eco-primary-700">{totalCO2.toLocaleString()} pounds of CO₂</span> from entering our atmosphere—the equivalent of what hundreds of trees would absorb in a year.
+            </p>
+            <p className="text-base">
+              Beyond the environmental impact, the ReUSE Store embodies the principles of circular economy and sustainable consumption. By choosing to reuse, our community extends the lifecycle of everyday items, reduces resource extraction, and demonstrates that environmental stewardship can be practical, accessible, and community-driven.
+            </p>
           </div>
         </div>
       </div>
