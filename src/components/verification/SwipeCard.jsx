@@ -120,10 +120,17 @@ const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
           {/* Image Section */}
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-eco-primary-800">
-              Donation Photo
+              Primary Photo
             </h3>
             <div className="bg-gray-100 rounded-lg overflow-hidden aspect-square flex items-center justify-center">
-              {data.imageUrl ? (
+              {data.items && data.items.length > 0 && data.items[0].imageUrl ? (
+                <img
+                  src={data.items[0].imageUrl}
+                  alt="First item"
+                  className="w-full h-full object-cover"
+                  draggable="false"
+                />
+              ) : data.imageUrl ? (
                 <img
                   src={data.imageUrl}
                   alt="Donation"
@@ -136,12 +143,17 @@ const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
                 </div>
               )}
             </div>
+            {data.items && data.items.length > 1 && (
+              <p className="text-sm text-gray-600 text-center">
+                +{data.items.length - 1} more {data.items.length === 2 ? 'item' : 'items'} in this checkout
+              </p>
+            )}
           </div>
 
           {/* Information Section */}
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-eco-primary-800">
-              Donation Information
+              Checkout Session Information
             </h3>
 
             <div className="space-y-3">
@@ -161,18 +173,48 @@ const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-600">Object Name</label>
-                <p className="text-gray-900 mt-1">{data.objectName}</p>
+                <label className="text-sm font-medium text-gray-600">Total Items in Session</label>
+                <p className="text-gray-900 mt-1 font-semibold">{data.totalItems || data.items?.length || 0}</p>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-600">Description</label>
-                <p className="text-gray-900 mt-1">{data.description || 'No description provided'}</p>
+                <label className="text-sm font-medium text-gray-600">Checkout ID</label>
+                <p className="text-gray-900 mt-1 font-mono text-sm">{data.checkoutId}</p>
               </div>
 
+              {/* Items List */}
               <div>
-                <label className="text-sm font-medium text-gray-600">Submission ID</label>
-                <p className="text-gray-900 mt-1 font-mono text-sm">{data.submissionId}</p>
+                <label className="text-sm font-medium text-gray-600 mb-2 block">Items in this checkout:</label>
+                <div className="space-y-2 max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-3">
+                  {data.items && data.items.length > 0 ? (
+                    data.items.map((item, index) => (
+                      <div key={item.id || index} className="bg-white p-3 rounded-md border border-gray-200">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900">{item.name}</p>
+                            {item.description && (
+                              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                            )}
+                          </div>
+                          <span className="text-sm font-medium text-eco-primary-600 ml-2">
+                            Qty: {item.quantity}
+                          </span>
+                        </div>
+                        {item.imageUrl && (
+                          <div className="mt-2">
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="w-20 h-20 object-cover rounded border border-gray-200"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No items in this checkout</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -205,8 +247,9 @@ const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
 
         {/* Swipe Instructions */}
         <div className="text-center mt-6 text-sm text-gray-500">
-          <p>Swipe left or click "Confirm & Approve" if information is correct</p>
-          <p>Swipe right or click "Flag for Review" if it needs review</p>
+          <p>Swipe left or click "Confirm & Approve" if all items in this checkout are correct</p>
+          <p>Swipe right or click "Flag for Review" if any items need review</p>
+          <p className="mt-1 text-xs">This will approve/flag all {data.totalItems || data.items?.length || 0} items in this checkout session</p>
         </div>
       </div>
     </div>

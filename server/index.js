@@ -116,10 +116,91 @@ app.get('/api/checkouts', (req, res) => {
   }
 });
 
+// Get checkouts (grouped by session) for verification
+app.get('/api/verification/checkouts', (req, res) => {
+  try {
+    const { year, status = 'pending', page = 1, limit = 50, lastMonthOnly = 'false' } = req.query;
+    const offset = (page - 1) * limit;
+
+    let itemWhere = ['verification_status = ?'];
+    let itemParams = [status];
+
+    if (lastMonthOnly === 'true' && status === 'approved') {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      itemWhere.push("verified_at >= datetime(?)");
+      itemParams.push(oneMonthAgo.toISOString());
+    }
+
+    let checkoutWhere = [];
+    if (year) {
+      checkoutWhere.push('checkouts.year_range = ?');
+      itemParams.push(year);
+    }
+
+    const itemWhereClause = itemWhere.join(' AND ');
+    const checkoutWhereClause = checkoutWhere.length > 0 ? 'WHERE ' + checkoutWhere.join(' AND ') : '';
+
+    // Get checkouts that have items with specified status
+    const checkoutsQuery = `
+      SELECT DISTINCT checkouts.*
+      FROM checkouts
+      JOIN items ON checkouts.id = items.checkout_id
+      ${checkoutWhereClause}
+      ${checkoutWhere.length > 0 ? 'AND' : 'WHERE'} ${itemWhereClause}
+      ORDER BY checkouts.date DESC, checkouts.id DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const checkouts = db.prepare(checkoutsQuery).all(...itemParams, limit, offset);
+
+    // For each checkout, get all its items
+    const checkoutsWithItems = checkouts.map(checkout => {
+      const items = db.prepare(`
+        SELECT * FROM items
+        WHERE checkout_id = ?
+        ORDER BY id ASC
+      `).all(checkout.id);
+
+      return {
+        ...checkout,
+        items,
+        totalItems: items.length
+      };
+    });
+
+    // Get stats (count of unique checkout sessions)
+    const stats = {
+      pending: db.prepare('SELECT COUNT(DISTINCT checkout_id) as count FROM items WHERE verification_status = ?').get('pending').count,
+      approved: (() => {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        return db.prepare(
+          'SELECT COUNT(DISTINCT checkout_id) as count FROM items WHERE verification_status = ? AND verified_at >= datetime(?)'
+        ).get('approved', oneMonthAgo.toISOString()).count;
+      })(),
+      flagged: db.prepare('SELECT COUNT(DISTINCT checkout_id) as count FROM items WHERE verification_status = ?').get('flagged').count
+    };
+
+    res.json({
+      checkouts: checkoutsWithItems,
+      stats,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: checkoutsWithItems.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching verification checkouts:', error);
+    res.status(500).json({ error: 'Failed to fetch verification checkouts' });
+  }
+});
+
 // Get items for verification with pagination
 app.get('/api/verification/items', (req, res) => {
   try {
-    const { year, status = 'pending', page = 1, limit = 20 } = req.query;
+    const { year, status = 'pending', page = 1, limit = 100, lastMonthOnly = 'false' } = req.query;
     const offset = (page - 1) * limit;
 
     let whereClause = ['verification_status = ?'];
@@ -128,6 +209,14 @@ app.get('/api/verification/items', (req, res) => {
     if (year) {
       whereClause.push('year_range = ?');
       params.push(year);
+    }
+
+    // For approved tab, only show items from last month
+    if (lastMonthOnly === 'true' && status === 'approved') {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      whereClause.push("verified_at >= datetime(?)");
+      params.push(oneMonthAgo.toISOString());
     }
 
     const where = whereClause.join(' AND ');
@@ -154,8 +243,22 @@ app.get('/api/verification/items', (req, res) => {
 
     const items = db.prepare(query).all(...params, limit, offset);
 
+    // Get stats for all statuses
+    const stats = {
+      pending: db.prepare('SELECT COUNT(*) as count FROM items WHERE verification_status = ?').get('pending').count,
+      approved: (() => {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        return db.prepare(
+          'SELECT COUNT(*) as count FROM items WHERE verification_status = ? AND verified_at >= datetime(?)'
+        ).get('approved', oneMonthAgo.toISOString()).count;
+      })(),
+      flagged: db.prepare('SELECT COUNT(*) as count FROM items WHERE verification_status = ?').get('flagged').count
+    };
+
     res.json({
       items,
+      stats,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -169,18 +272,65 @@ app.get('/api/verification/items', (req, res) => {
   }
 });
 
+// Update all items in a checkout session
+app.patch('/api/verification/checkouts/:checkoutId', (req, res) => {
+  try {
+    const { checkoutId } = req.params;
+    const { status, verifiedAt } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+
+    // Update all items in this checkout
+    const result = db.prepare(`
+      UPDATE items
+      SET verification_status = ?,
+          flagged = ?,
+          verified_at = CURRENT_TIMESTAMP
+      WHERE checkout_id = ?
+    `).run(status, status === 'flagged' ? 1 : 0, checkoutId);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Checkout not found' });
+    }
+
+    res.json({
+      success: true,
+      checkoutId,
+      itemsUpdated: result.changes,
+      status
+    });
+  } catch (error) {
+    console.error('Error updating checkout:', error);
+    res.status(500).json({ error: 'Failed to update checkout' });
+  }
+});
+
 // Update item verification status
 app.patch('/api/verification/items/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { verification_status, flagged, verified_by, image_url } = req.body;
+    const { status, verification_status, flagged, verified_by, image_url, verifiedAt } = req.body;
 
     const updates = [];
     const params = [];
 
-    if (verification_status) {
+    // Handle both 'status' and 'verification_status' for backwards compatibility
+    const newStatus = status || verification_status;
+
+    if (newStatus) {
       updates.push('verification_status = ?');
-      params.push(verification_status);
+      params.push(newStatus);
+
+      // Set flagged field based on status
+      if (newStatus === 'flagged') {
+        updates.push('flagged = ?');
+        params.push(1);
+      } else if (newStatus === 'approved') {
+        updates.push('flagged = ?');
+        params.push(0);
+      }
     }
 
     if (flagged !== undefined) {
@@ -198,7 +348,8 @@ app.patch('/api/verification/items/:id', (req, res) => {
       params.push(image_url);
     }
 
-    if (verification_status === 'checked' || verification_status === 'flagged') {
+    // Update verified_at timestamp
+    if (newStatus === 'approved' || newStatus === 'flagged' || verifiedAt) {
       updates.push('verified_at = CURRENT_TIMESTAMP');
     }
 
@@ -500,6 +651,8 @@ app.listen(PORT, () => {
   console.log(`   POST /api/upload                    - Upload photo (mock)`);
   console.log(`   GET  /api/verification/items        - Get items for verification`);
   console.log(`   PATCH /api/verification/items/:id   - Update item verification status`);
+  console.log(`   GET  /api/verification/checkouts    - Get grouped checkouts for verification`);
+  console.log(`   PATCH /api/verification/checkouts/:checkoutId - Update checkout verification status`);
   console.log(`   GET  /api/analytics/top-items       - Get top items (optional ?year=)`);
   console.log(`   GET  /api/items/search              - Search items (required ?query=)\n`);
 });
