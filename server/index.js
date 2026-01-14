@@ -484,6 +484,768 @@ app.post('/api/upload', (req, res) => {
   }
 });
 
+// ============================================================================
+// CHECK-IN / CHECK-OUT SYSTEM API ENDPOINTS
+// ============================================================================
+
+// Student Management Endpoints
+// Search students (for autofill)
+app.get('/api/students/search', (req, res) => {
+  try {
+    const { q = '', withFridgesOnly = 'false' } = req.query;
+
+    let query;
+    if (withFridgesOnly === 'true') {
+      // Only return students with active fridge checkouts
+      query = `
+        SELECT DISTINCT s.id, s.name, s.email, s.housing_assignment, s.graduation_year as gradYear
+        FROM students s
+        JOIN checkouts_out co ON co.student_id = s.id
+        JOIN checkout_items ci ON ci.checkout_id = co.id
+        JOIN fridge_inventory fi ON fi.id = ci.fridge_id
+        WHERE (s.name LIKE ? OR s.email LIKE ?)
+          AND co.status = 'active'
+          AND fi.status = 'checked_out'
+        ORDER BY s.name
+        LIMIT 50
+      `;
+    } else {
+      // Return all students
+      query = `
+        SELECT id, name, email, housing_assignment, graduation_year as gradYear
+        FROM students
+        WHERE name LIKE ? OR email LIKE ?
+        ORDER BY name
+        LIMIT 50
+      `;
+    }
+
+    const students = db.prepare(query).all(`%${q}%`, `%${q}%`);
+    res.json(students);
+  } catch (error) {
+    console.error('Error searching students:', error);
+    res.status(500).json({ error: 'Failed to search students' });
+  }
+});
+
+// Get student by email
+app.get('/api/students/:email', (req, res) => {
+  try {
+    const { email } = req.params;
+
+    const student = db.prepare(`
+      SELECT id, name, email, housing_assignment, graduation_year as gradYear
+      FROM students
+      WHERE email = ?
+    `).get(email);
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    res.json(student);
+  } catch (error) {
+    console.error('Error fetching student:', error);
+    res.status(500).json({ error: 'Failed to fetch student' });
+  }
+});
+
+// Create or update student
+app.post('/api/students', (req, res) => {
+  try {
+    const { name, email, housing, gradYear } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Name and email are required' });
+    }
+
+    // Try to find existing student
+    const existing = db.prepare('SELECT id FROM students WHERE email = ?').get(email);
+
+    if (existing) {
+      // Update existing student
+      db.prepare(`
+        UPDATE students
+        SET name = ?, housing_assignment = ?, graduation_year = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE email = ?
+      `).run(name, housing || null, gradYear || null, email);
+
+      res.json({ id: existing.id, name, email, housing, gradYear });
+    } else {
+      // Create new student
+      const result = db.prepare(`
+        INSERT INTO students (name, email, housing_assignment, graduation_year)
+        VALUES (?, ?, ?, ?)
+      `).run(name, email, housing || null, gradYear || null);
+
+      res.json({ id: result.lastInsertRowid, name, email, housing, gradYear });
+    }
+  } catch (error) {
+    console.error('Error creating/updating student:', error);
+    res.status(500).json({ error: 'Failed to create/update student' });
+  }
+});
+
+// Inventory Item Endpoints
+// Search inventory items (for check-out)
+app.get('/api/inventory/search', (req, res) => {
+  try {
+    const { q = '' } = req.query;
+
+    const query = `
+      SELECT id, sku, name, category, available_quantity
+      FROM inventory_items
+      WHERE (name LIKE ? OR sku LIKE ?) AND available_quantity > 0
+      ORDER BY name
+      LIMIT 50
+    `;
+
+    const items = db.prepare(query).all(`%${q}%`, `%${q}%`);
+    res.json(items);
+  } catch (error) {
+    console.error('Error searching inventory:', error);
+    res.status(500).json({ error: 'Failed to search inventory' });
+  }
+});
+
+// Get all inventory items (admin only - no auth yet, will add later)
+app.get('/api/inventory', (req, res) => {
+  try {
+    const items = db.prepare(`
+      SELECT id, sku, name, category, current_quantity, available_quantity
+      FROM inventory_items
+      ORDER BY name
+    `).all();
+
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    res.status(500).json({ error: 'Failed to fetch inventory' });
+  }
+});
+
+// Create new inventory item
+app.post('/api/inventory', (req, res) => {
+  try {
+    const { name, category = 'Other', quantity = 1, createdBy } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Item name is required' });
+    }
+
+    // Generate SKU (simple format: first 3 letters + random number)
+    const prefix = name.substring(0, 3).toUpperCase();
+    const randomNum = Math.floor(Math.random() * 100000);
+    const sku = `${prefix}${randomNum}`;
+
+    const stmt = db.prepare(`
+      INSERT INTO inventory_items (sku, name, category, current_quantity, available_quantity, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const result = stmt.run(sku, name.trim(), category, quantity, quantity, createdBy || null);
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid,
+      sku,
+      name: name.trim(),
+      category,
+      current_quantity: quantity,
+      available_quantity: quantity
+    });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'An item with this SKU already exists' });
+    }
+    console.error('Error creating inventory item:', error);
+    res.status(500).json({ error: 'Failed to create inventory item' });
+  }
+});
+
+// Fridge Management Endpoints
+// Get fridge attribute options (from dynamic tables)
+app.get('/api/fridges/attributes', (req, res) => {
+  try {
+    const sizes = db.prepare('SELECT name FROM fridge_sizes ORDER BY id').all().map(r => r.name);
+    const colors = db.prepare('SELECT name FROM fridge_colors ORDER BY id').all().map(r => r.name);
+    const brands = db.prepare('SELECT name FROM fridge_brands ORDER BY name').all().map(r => r.name);
+    const conditions = db.prepare('SELECT name FROM fridge_conditions ORDER BY id').all().map(r => r.name);
+
+    res.json({ sizes, colors, brands, conditions });
+  } catch (error) {
+    console.error('Error fetching fridge attributes:', error);
+    res.status(500).json({ error: 'Failed to fetch fridge attributes' });
+  }
+});
+
+// Add new fridge attribute (workers and admins can both add)
+app.post('/api/fridges/attributes/sizes', (req, res) => {
+  try {
+    const { name, createdBy } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Size name is required' });
+    }
+    const stmt = db.prepare('INSERT INTO fridge_sizes (name, created_by) VALUES (?, ?)');
+    const result = stmt.run(name.trim(), createdBy || null);
+    res.json({ success: true, id: result.lastInsertRowid, name: name.trim() });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'This size already exists' });
+    }
+    console.error('Error adding fridge size:', error);
+    res.status(500).json({ error: 'Failed to add fridge size' });
+  }
+});
+
+app.post('/api/fridges/attributes/colors', (req, res) => {
+  try {
+    const { name, createdBy } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Color name is required' });
+    }
+    const stmt = db.prepare('INSERT INTO fridge_colors (name, created_by) VALUES (?, ?)');
+    const result = stmt.run(name.trim(), createdBy || null);
+    res.json({ success: true, id: result.lastInsertRowid, name: name.trim() });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'This color already exists' });
+    }
+    console.error('Error adding fridge color:', error);
+    res.status(500).json({ error: 'Failed to add fridge color' });
+  }
+});
+
+app.post('/api/fridges/attributes/brands', (req, res) => {
+  try {
+    const { name, createdBy } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Brand name is required' });
+    }
+    const stmt = db.prepare('INSERT INTO fridge_brands (name, created_by) VALUES (?, ?)');
+    const result = stmt.run(name.trim(), createdBy || null);
+    res.json({ success: true, id: result.lastInsertRowid, name: name.trim() });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'This brand already exists' });
+    }
+    console.error('Error adding fridge brand:', error);
+    res.status(500).json({ error: 'Failed to add fridge brand' });
+  }
+});
+
+app.post('/api/fridges/attributes/conditions', (req, res) => {
+  try {
+    const { name, createdBy } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Condition name is required' });
+    }
+    const stmt = db.prepare('INSERT INTO fridge_conditions (name, created_by) VALUES (?, ?)');
+    const result = stmt.run(name.trim(), createdBy || null);
+    res.json({ success: true, id: result.lastInsertRowid, name: name.trim() });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'This condition already exists' });
+    }
+    console.error('Error adding fridge condition:', error);
+    res.status(500).json({ error: 'Failed to add fridge condition' });
+  }
+});
+
+// Get student's active fridge checkouts
+app.get('/api/fridges/checkouts/:studentEmail', (req, res) => {
+  try {
+    const { studentEmail } = req.params;
+
+    const query = `
+      SELECT
+        fi.id as fridgeId,
+        fi.fridge_number as fridgeNumber,
+        fi.brand,
+        fi.has_freezer as hasFreezer,
+        fi.size,
+        fi.color,
+        fi.condition,
+        co.checkout_date as checkoutDate,
+        co.id as checkoutId
+      FROM fridge_inventory fi
+      JOIN checkout_items ci ON ci.fridge_id = fi.id
+      JOIN checkouts_out co ON co.id = ci.checkout_id
+      JOIN students s ON s.id = co.student_id
+      WHERE s.email = ? AND co.status = 'active' AND fi.status = 'checked_out'
+      ORDER BY co.checkout_date DESC
+    `;
+
+    const checkouts = db.prepare(query).all(studentEmail);
+    res.json(checkouts);
+  } catch (error) {
+    console.error('Error fetching student fridge checkouts:', error);
+    res.status(500).json({ error: 'Failed to fetch fridge checkouts' });
+  }
+});
+
+// Return fridge
+app.post('/api/fridges/return', (req, res) => {
+  try {
+    const { fridgeId, studentEmail, returnedBy } = req.body;
+
+    if (!fridgeId || !studentEmail) {
+      return res.status(400).json({ error: 'Fridge ID and student email are required' });
+    }
+
+    db.prepare('BEGIN').run();
+
+    try {
+      // Find the active checkout
+      const checkout = db.prepare(`
+        SELECT co.id, co.student_id
+        FROM checkouts_out co
+        JOIN students s ON s.id = co.student_id
+        JOIN checkout_items ci ON ci.checkout_id = co.id
+        WHERE s.email = ? AND ci.fridge_id = ? AND co.status = 'active'
+        LIMIT 1
+      `).get(studentEmail, fridgeId);
+
+      if (!checkout) {
+        db.prepare('ROLLBACK').run();
+        return res.status(404).json({ error: 'No active checkout found for this fridge and student' });
+      }
+
+      // Update fridge status to available
+      db.prepare('UPDATE fridge_inventory SET status = ?, current_checkout_id = NULL WHERE id = ?')
+        .run('available', fridgeId);
+
+      // Check if this was the only item in the checkout
+      const itemCount = db.prepare('SELECT COUNT(*) as count FROM checkout_items WHERE checkout_id = ?')
+        .get(checkout.id).count;
+
+      if (itemCount === 1) {
+        // If only item, mark entire checkout as returned
+        db.prepare('UPDATE checkouts_out SET status = ?, actual_return_date = CURRENT_TIMESTAMP WHERE id = ?')
+          .run('returned', checkout.id);
+      } else {
+        // Otherwise, just remove this item from checkout
+        db.prepare('DELETE FROM checkout_items WHERE checkout_id = ? AND fridge_id = ?')
+          .run(checkout.id, fridgeId);
+      }
+
+      // Create a check-in record for the returned fridge
+      const checkinStmt = db.prepare('INSERT INTO checkins (checked_in_by, notes) VALUES (?, ?)');
+      const checkinResult = checkinStmt.run(returnedBy || 'system', `Fridge return from ${studentEmail}`);
+
+      db.prepare('INSERT INTO checkin_items (checkin_id, fridge_id, quantity) VALUES (?, ?, 1)')
+        .run(checkinResult.lastInsertRowid, fridgeId);
+
+      db.prepare('COMMIT').run();
+
+      res.json({
+        success: true,
+        message: 'Fridge returned successfully',
+        fridgeId,
+        checkoutId: checkout.id
+      });
+    } catch (error) {
+      db.prepare('ROLLBACK').run();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error returning fridge:', error);
+    res.status(500).json({ error: 'Failed to return fridge' });
+  }
+});
+
+// Check in NEW fridge to inventory
+app.post('/api/fridges/checkin', (req, res) => {
+  try {
+    const { hasFreezer, size, color, brand, condition, notes, checkedInBy } = req.body;
+
+    if (hasFreezer === undefined || hasFreezer === null) {
+      return res.status(400).json({ error: 'Fridge type (with/without freezer) is required' });
+    }
+
+    db.prepare('BEGIN').run();
+
+    try {
+      // Get next fridge number
+      const maxFridge = db.prepare('SELECT MAX(fridge_number) as max FROM fridge_inventory').get();
+      const nextFridgeNumber = (maxFridge.max || 0) + 1;
+
+      // Insert new fridge
+      const fridgeStmt = db.prepare(`
+        INSERT INTO fridge_inventory
+        (fridge_number, has_freezer, size, color, brand, condition, notes, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'available')
+      `);
+      const fridgeResult = fridgeStmt.run(
+        nextFridgeNumber,
+        hasFreezer ? 1 : 0,
+        size || null,
+        color || null,
+        brand || null,
+        condition || 'Good',
+        notes || null
+      );
+
+      // Create check-in record
+      const checkinStmt = db.prepare('INSERT INTO checkins (checked_in_by, notes) VALUES (?, ?)');
+      const checkinResult = checkinStmt.run(
+        checkedInBy || 'worker@haverford.edu',
+        `New fridge #${nextFridgeNumber} added to inventory`
+      );
+
+      db.prepare('INSERT INTO checkin_items (checkin_id, fridge_id, quantity) VALUES (?, ?, 1)')
+        .run(checkinResult.lastInsertRowid, fridgeResult.lastInsertRowid);
+
+      db.prepare('COMMIT').run();
+
+      res.json({
+        success: true,
+        message: 'Fridge checked in successfully',
+        fridgeId: fridgeResult.lastInsertRowid,
+        fridgeNumber: nextFridgeNumber,
+        checkinId: checkinResult.lastInsertRowid
+      });
+    } catch (error) {
+      db.prepare('ROLLBACK').run();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error checking in fridge:', error);
+    res.status(500).json({ error: 'Failed to check in fridge' });
+  }
+});
+
+// Search available fridges for check-out
+app.get('/api/fridges/available', (req, res) => {
+  try {
+    const { has_freezer } = req.query;
+
+    let query = `
+      SELECT id, fridge_number, has_freezer, size, color, brand, condition
+      FROM fridge_inventory
+      WHERE status = 'available'
+    `;
+
+    const params = [];
+    if (has_freezer !== undefined) {
+      query += ' AND has_freezer = ?';
+      params.push(has_freezer === 'true' ? 1 : 0);
+    }
+
+    query += ' ORDER BY fridge_number';
+
+    const fridges = db.prepare(query).all(...params);
+    res.json(fridges);
+  } catch (error) {
+    console.error('Error fetching available fridges:', error);
+    res.status(500).json({ error: 'Failed to fetch available fridges' });
+  }
+});
+
+// Get fridge by number
+app.get('/api/fridges/:number', (req, res) => {
+  try {
+    const { number } = req.params;
+
+    const fridge = db.prepare(`
+      SELECT id, fridge_number, has_freezer, size, color, brand, condition, status, notes
+      FROM fridge_inventory
+      WHERE fridge_number = ?
+    `).get(number);
+
+    if (!fridge) {
+      return res.status(404).json({ error: 'Fridge not found' });
+    }
+
+    res.json(fridge);
+  } catch (error) {
+    console.error('Error fetching fridge:', error);
+    res.status(500).json({ error: 'Failed to fetch fridge' });
+  }
+});
+
+// Check-Out Endpoints
+// Create check-out transaction
+app.post('/api/checkouts-out', (req, res) => {
+  try {
+    const { student, items, checkedOutBy, notes } = req.body;
+
+    if (!student || !student.name || !student.email) {
+      return res.status(400).json({ error: 'Student information is required' });
+    }
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ error: 'At least one item is required' });
+    }
+
+    // Start transaction
+    db.prepare('BEGIN').run();
+
+    try {
+      // Create or update student
+      const existingStudent = db.prepare('SELECT id FROM students WHERE email = ?').get(student.email);
+      let studentId;
+
+      if (existingStudent) {
+        studentId = existingStudent.id;
+        db.prepare(`
+          UPDATE students
+          SET name = ?, housing_assignment = ?, graduation_year = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(student.name, student.housing || null, student.gradYear || null, studentId);
+      } else {
+        const result = db.prepare(`
+          INSERT INTO students (name, email, housing_assignment, graduation_year)
+          VALUES (?, ?, ?, ?)
+        `).run(student.name, student.email, student.housing || null, student.gradYear || null);
+        studentId = result.lastInsertRowid;
+      }
+
+      // Create checkout record
+      const checkoutResult = db.prepare(`
+        INSERT INTO checkouts_out (student_id, checked_out_by, notes)
+        VALUES (?, ?, ?)
+      `).run(studentId, checkedOutBy || null, notes || null);
+
+      const checkoutId = checkoutResult.lastInsertRowid;
+
+      // Add checkout items and update inventory
+      for (const item of items) {
+        if (item.type === 'item') {
+          // Add checkout item
+          db.prepare(`
+            INSERT INTO checkout_items (checkout_id, item_id, quantity)
+            VALUES (?, ?, ?)
+          `).run(checkoutId, item.itemId, item.quantity);
+
+          // Update inventory quantity
+          db.prepare(`
+            UPDATE inventory_items
+            SET available_quantity = available_quantity - ?
+            WHERE id = ?
+          `).run(item.quantity, item.itemId);
+
+        } else if (item.type === 'fridge') {
+          // Add checkout item
+          db.prepare(`
+            INSERT INTO checkout_items (checkout_id, fridge_id, quantity)
+            VALUES (?, ?, 1)
+          `).run(checkoutId, item.fridgeId);
+
+          // Update fridge status
+          db.prepare(`
+            UPDATE fridge_inventory
+            SET status = 'checked_out', current_checkout_id = ?
+            WHERE id = ?
+          `).run(checkoutId, item.fridgeId);
+        }
+      }
+
+      db.prepare('COMMIT').run();
+
+      res.json({
+        success: true,
+        checkoutId,
+        message: 'Items checked out successfully'
+      });
+
+    } catch (error) {
+      db.prepare('ROLLBACK').run();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error creating checkout:', error);
+    res.status(500).json({ error: 'Failed to create checkout' });
+  }
+});
+
+// Get active check-outs
+app.get('/api/checkouts-out/active', (req, res) => {
+  try {
+    const checkouts = db.prepare(`
+      SELECT
+        co.id,
+        co.checkout_date,
+        co.status,
+        co.checked_out_by,
+        co.notes,
+        s.name as student_name,
+        s.email as student_email,
+        s.housing_assignment,
+        s.graduation_year
+      FROM checkouts_out co
+      JOIN students s ON co.student_id = s.id
+      WHERE co.status = 'active'
+      ORDER BY co.checkout_date DESC
+    `).all();
+
+    // Get items for each checkout
+    for (const checkout of checkouts) {
+      const items = db.prepare(`
+        SELECT
+          ci.id,
+          ci.quantity,
+          CASE
+            WHEN ci.item_id IS NOT NULL THEN 'item'
+            ELSE 'fridge'
+          END as type,
+          COALESCE(ii.name, 'Fridge #' || fi.fridge_number) as name,
+          ii.sku,
+          fi.fridge_number,
+          fi.brand
+        FROM checkout_items ci
+        LEFT JOIN inventory_items ii ON ci.item_id = ii.id
+        LEFT JOIN fridge_inventory fi ON ci.fridge_id = fi.id
+        WHERE ci.checkout_id = ?
+      `).all(checkout.id);
+
+      checkout.items = items;
+    }
+
+    res.json(checkouts);
+  } catch (error) {
+    console.error('Error fetching active checkouts:', error);
+    res.status(500).json({ error: 'Failed to fetch active checkouts' });
+  }
+});
+
+// Check-In Endpoints
+// Search items/fridges for check-in
+app.get('/api/checkins/search', (req, res) => {
+  try {
+    const { q = '' } = req.query;
+
+    // Search inventory items
+    const items = db.prepare(`
+      SELECT id, sku, name, category, current_quantity, 'item' as type
+      FROM inventory_items
+      WHERE name LIKE ? OR sku LIKE ?
+      LIMIT 25
+    `).all(`%${q}%`, `%${q}%`);
+
+    // Search fridges
+    const fridges = db.prepare(`
+      SELECT
+        id,
+        fridge_number,
+        brand,
+        has_freezer,
+        status,
+        'fridge' as type
+      FROM fridge_inventory
+      WHERE CAST(fridge_number AS TEXT) LIKE ? OR brand LIKE ?
+      LIMIT 25
+    `).all(`%${q}%`, `%${q}%`);
+
+    res.json([...items, ...fridges]);
+  } catch (error) {
+    console.error('Error searching for check-in:', error);
+    res.status(500).json({ error: 'Failed to search for check-in' });
+  }
+});
+
+// Create check-in transaction
+app.post('/api/checkins', (req, res) => {
+  try {
+    const { items, checkedInBy, notes } = req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ error: 'At least one item is required' });
+    }
+
+    // Start transaction
+    db.prepare('BEGIN').run();
+
+    try {
+      // Create checkin record
+      const checkinResult = db.prepare(`
+        INSERT INTO checkins (checked_in_by, notes)
+        VALUES (?, ?)
+      `).run(checkedInBy || null, notes || null);
+
+      const checkinId = checkinResult.lastInsertRowid;
+
+      // Process each item
+      for (const item of items) {
+        if (item.type === 'item') {
+          // Add checkin item
+          db.prepare(`
+            INSERT INTO checkin_items (checkin_id, item_id, quantity)
+            VALUES (?, ?, ?)
+          `).run(checkinId, item.itemId, item.quantity);
+
+          // Update inventory quantity
+          db.prepare(`
+            UPDATE inventory_items
+            SET available_quantity = available_quantity + ?,
+                current_quantity = current_quantity + ?
+            WHERE id = ?
+          `).run(item.quantity, item.quantity, item.itemId);
+
+        } else if (item.type === 'fridge') {
+          // For fridges, check if this is a return or new fridge
+          const existingFridge = db.prepare('SELECT id, fridge_number FROM fridge_inventory WHERE id = ?').get(item.fridgeId);
+
+          if (existingFridge) {
+            // Returning an existing fridge
+            db.prepare(`
+              INSERT INTO checkin_items (checkin_id, fridge_id, quantity)
+              VALUES (?, ?, 1)
+            `).run(checkinId, item.fridgeId);
+
+            // Update fridge status to available
+            db.prepare(`
+              UPDATE fridge_inventory
+              SET status = 'available', current_checkout_id = NULL
+              WHERE id = ?
+            `).run(item.fridgeId);
+
+            // Mark associated checkout as returned if exists
+            const checkoutId = db.prepare('SELECT current_checkout_id FROM fridge_inventory WHERE id = ?').get(item.fridgeId)?.current_checkout_id;
+            if (checkoutId) {
+              db.prepare(`
+                UPDATE checkouts_out
+                SET status = 'returned', actual_return_date = CURRENT_TIMESTAMP
+                WHERE id = ?
+              `).run(checkoutId);
+            }
+          } else {
+            // New fridge being checked in - auto-generate fridge number
+            const maxNumber = db.prepare('SELECT MAX(fridge_number) as max FROM fridge_inventory').get().max || 0;
+            const newFridgeNumber = maxNumber + 1;
+
+            const fridgeResult = db.prepare(`
+              INSERT INTO fridge_inventory (fridge_number, has_freezer, brand, status, condition)
+              VALUES (?, ?, ?, 'available', 'Good')
+            `).run(newFridgeNumber, item.hasFreezer ? 1 : 0, item.brand || 'Unknown');
+
+            // Add checkin item
+            db.prepare(`
+              INSERT INTO checkin_items (checkin_id, fridge_id, quantity)
+              VALUES (?, ?, 1)
+            `).run(checkinId, fridgeResult.lastInsertRowid);
+          }
+        }
+      }
+
+      db.prepare('COMMIT').run();
+
+      res.json({
+        success: true,
+        checkinId,
+        message: 'Items checked in successfully'
+      });
+
+    } catch (error) {
+      db.prepare('ROLLBACK').run();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error creating checkin:', error);
+    res.status(500).json({ error: 'Failed to create checkin' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`\n🚀 ReUSE Store API Server running at http://localhost:${PORT}`);

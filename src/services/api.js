@@ -263,3 +263,251 @@ export const healthAPI = {
     return { status: 'ok', backend: 'google-sheets' };
   }
 };
+
+/**
+ * Student API (Check-In/Check-Out System)
+ */
+export const studentAPI = {
+  /**
+   * Search students by name or email
+   * @param {string} query - Search query
+   * @param {boolean} withFridgesOnly - Only return students with active fridge checkouts
+   * @returns {Promise<Array>} List of students
+   */
+  async searchStudents(query = '', withFridgesOnly = false) {
+    const response = await axios.get(`${API_URL}/students/search`, {
+      params: {
+        q: query,
+        withFridgesOnly: withFridgesOnly ? 'true' : 'false'
+      }
+    });
+    return response.data;
+  },
+
+  /**
+   * Get student by email
+   * @param {string} email - Student email
+   * @returns {Promise<Object>} Student object
+   */
+  async getStudentByEmail(email) {
+    const response = await axios.get(`${API_URL}/students/${email}`);
+    return response.data;
+  },
+
+  /**
+   * Create or update student
+   * @param {Object} studentData - Student information
+   * @returns {Promise<Object>} Created/updated student
+   */
+  async createOrUpdateStudent(studentData) {
+    const response = await axios.post(`${API_URL}/students`, studentData);
+    return response.data;
+  }
+};
+
+/**
+ * Inventory API (Check-In/Check-Out System)
+ */
+export const inventoryAPI = {
+  /**
+   * Search inventory items
+   * @param {string} query - Search query
+   * @returns {Promise<Array>} List of inventory items
+   */
+  async searchItems(query = '') {
+    const response = await axios.get(`${API_URL}/inventory/search`, {
+      params: { q: query }
+    });
+    return response.data;
+  },
+
+  /**
+   * Get all inventory items (admin only)
+   * @returns {Promise<Array>} All inventory items
+   */
+  async getAllItems() {
+    const response = await axios.get(`${API_URL}/inventory`);
+    return response.data;
+  },
+
+  /**
+   * Create new inventory item (admin only)
+   * @param {Object} itemData - Item information
+   * @returns {Promise<Object>} Created item
+   */
+  async createItem(itemData) {
+    const response = await axios.post(`${API_URL}/inventory`, itemData);
+    return response.data;
+  }
+};
+
+/**
+ * Fridge API (Check-In/Check-Out System)
+ */
+export const fridgeAPI = {
+  /**
+   * Get fridge attribute options for dropdowns (from dynamic tables)
+   * @returns {Promise<Object>} Brands, sizes, colors, conditions
+   */
+  async getAttributes() {
+    const response = await axios.get(`${API_URL}/fridges/attributes`);
+    return response.data;
+  },
+
+  /**
+   * Add new fridge size (workers and admins can add)
+   * @param {string} name - Size name
+   * @param {string} createdBy - User who created it
+   * @returns {Promise<Object>} Created size
+   */
+  async addSize(name, createdBy) {
+    const response = await axios.post(`${API_URL}/fridges/attributes/sizes`, { name, createdBy });
+    return response.data;
+  },
+
+  /**
+   * Add new fridge color (workers and admins can add)
+   * @param {string} name - Color name
+   * @param {string} createdBy - User who created it
+   * @returns {Promise<Object>} Created color
+   */
+  async addColor(name, createdBy) {
+    const response = await axios.post(`${API_URL}/fridges/attributes/colors`, { name, createdBy });
+    return response.data;
+  },
+
+  /**
+   * Add new fridge brand (workers and admins can add)
+   * @param {string} name - Brand name
+   * @param {string} createdBy - User who created it
+   * @returns {Promise<Object>} Created brand
+   */
+  async addBrand(name, createdBy) {
+    const response = await axios.post(`${API_URL}/fridges/attributes/brands`, { name, createdBy });
+    return response.data;
+  },
+
+  /**
+   * Add new fridge condition (workers and admins can add)
+   * @param {string} name - Condition name
+   * @param {string} createdBy - User who created it
+   * @returns {Promise<Object>} Created condition
+   */
+  async addCondition(name, createdBy) {
+    const response = await axios.post(`${API_URL}/fridges/attributes/conditions`, { name, createdBy });
+    return response.data;
+  },
+
+  /**
+   * Get student's active fridge checkouts
+   * @param {string} email - Student email
+   * @returns {Promise<Array>} Active fridge checkouts
+   */
+  async getStudentCheckouts(email) {
+    const response = await axios.get(`${API_URL}/fridges/checkouts/${email}`);
+    return response.data;
+  },
+
+  /**
+   * Return a fridge
+   * @param {Object} data - { fridgeId, studentEmail, returnedBy }
+   * @returns {Promise<Object>} Return confirmation
+   */
+  async returnFridge(data) {
+    const response = await axios.post(`${API_URL}/fridges/return`, data);
+    return response.data;
+  },
+
+  /**
+   * Check in a NEW fridge to inventory
+   * @param {Object} data - { hasFreezer, size, color, brand, condition, notes, checkedInBy }
+   * @returns {Promise<Object>} Checkin confirmation with fridge number
+   */
+  async checkinFridge(data) {
+    const response = await axios.post(`${API_URL}/fridges/checkin`, data);
+    return response.data;
+  },
+
+  /**
+   * Search available fridges
+   * @param {boolean} hasFreezer - Filter by freezer type
+   * @returns {Promise<Array>} Available fridges
+   */
+  async getAvailableFridges(hasFreezer) {
+    const response = await axios.get(`${API_URL}/fridges/available`, {
+      params: hasFreezer !== undefined ? { has_freezer: hasFreezer } : {}
+    });
+    return response.data;
+  },
+
+  /**
+   * Get fridge by number
+   * @param {number} number - Fridge number
+   * @returns {Promise<Object>} Fridge details
+   */
+  async getFridgeByNumber(number) {
+    const response = await axios.get(`${API_URL}/fridges/${number}`);
+    return response.data;
+  },
+
+  /**
+   * Create new fridge (admin only)
+   * @param {Object} fridgeData - Fridge information
+   * @returns {Promise<Object>} Created fridge
+   */
+  async createFridge(fridgeData) {
+    const response = await axios.post(`${API_URL}/fridges`, fridgeData);
+    return response.data;
+  }
+};
+
+/**
+ * Checkout API (Check-Out System)
+ */
+export const checkoutAPI = {
+  /**
+   * Create checkout transaction
+   * @param {Object} checkoutData - Checkout information
+   * @returns {Promise<Object>} Checkout result
+   */
+  async createCheckout(checkoutData) {
+    const response = await axios.post(`${API_URL}/checkouts-out`, checkoutData);
+    return response.data;
+  },
+
+  /**
+   * Get active checkouts
+   * @returns {Promise<Array>} Active checkouts
+   */
+  async getActiveCheckouts() {
+    const response = await axios.get(`${API_URL}/checkouts-out/active`);
+    return response.data;
+  }
+};
+
+/**
+ * Checkin API (Check-In System)
+ */
+export const checkinAPI = {
+  /**
+   * Search items/fridges for check-in
+   * @param {string} query - Search query
+   * @returns {Promise<Array>} Search results
+   */
+  async searchForCheckin(query = '') {
+    const response = await axios.get(`${API_URL}/checkins/search`, {
+      params: { q: query }
+    });
+    return response.data;
+  },
+
+  /**
+   * Create checkin transaction
+   * @param {Object} checkinData - Checkin information
+   * @returns {Promise<Object>} Checkin result
+   */
+  async createCheckin(checkinData) {
+    const response = await axios.post(`${API_URL}/checkins`, checkinData);
+    return response.data;
+  }
+};
