@@ -27,3 +27,38 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# CSV files with donor data
+*.csv
+
+# Backend database
+backend/database.sqlite
+backend/database.sqlite-journal
+
+# Development documentation
+CHECK-SHEET-NAMES.md
+COLUMN_MAPPING_HELPER.md
+CSV-IMPORT-COMPLETE.md
+CSV-IMPORT-GUIDE.md
+CSV-IMPORT-READY.md
+DATABASE-MIGRATION-COMPLETE.md
+DEPLOY-UPDATED-CODE.md
+FINAL-DEPLOYMENT-STEPS.md
+FINAL_STEPS.md
+FIX-ACCESS-DENIED.md
+GOOGLE_SHEETS_SETUP.md
+IMPORT-ALL-CSV-FILES.md
+NEXT-STEPS-NOW.md
+QUICK-START.md
+QUICK_SETUP_GUIDE.md
+REDEPLOY-APPS-SCRIPT.md
+SETUP_CHECKLIST.md
+SHEET-NAME-ISSUE.md
+UPDATE-APPS-SCRIPT-NOW.md
+URGENT-FIXES-NEEDED.md
+URGENT-PASTE-NEW-CODE.md
+YOURE-ALL-SET.md
+extract-donors-from-drive.md
+
+# Test scripts
+test-import.sh
