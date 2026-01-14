@@ -106,12 +106,12 @@ app.get('/api/checkouts', (req, res) => {
       const items = db.prepare(`
         SELECT
           items.*,
-          fridges.company as fridge_company,
-          fridges.model as fridge_model,
-          fridges.size as fridge_size,
-          fridges.condition as fridge_condition
+          fridge_companies.company as fridge_company,
+          fridge_companies.model as fridge_model,
+          fridge_companies.size as fridge_size,
+          fridge_companies.condition as fridge_condition
         FROM items
-        LEFT JOIN fridges ON items.fridge_id = fridges.id
+        LEFT JOIN fridge_companies ON items.fridge_company_id = fridge_companies.id
         WHERE items.checkout_id = ?
         ORDER BY items.id
       `).all(checkout.id);
@@ -185,12 +185,12 @@ app.get('/api/verification/checkouts', (req, res) => {
       const allItems = db.prepare(`
         SELECT
           items.*,
-          fridges.company as fridge_company,
-          fridges.model as fridge_model,
-          fridges.size as fridge_size,
-          fridges.condition as fridge_condition
+          fridge_companies.company as fridge_company,
+          fridge_companies.model as fridge_model,
+          fridge_companies.size as fridge_size,
+          fridge_companies.condition as fridge_condition
         FROM items
-        LEFT JOIN fridges ON items.fridge_id = fridges.id
+        LEFT JOIN fridge_companies ON items.fridge_company_id = fridge_companies.id
         WHERE checkout_id IN (${placeholders})
         ORDER BY checkout_id ASC, id ASC
       `).all(...checkoutIds);
@@ -697,6 +697,200 @@ app.post('/api/upload', (req, res) => {
   }
 });
 
+// ============================================
+// FRIDGE INVENTORY ROUTES
+// ============================================
+
+// GET /api/fridges - Get all fridges with optional status filter
+app.get('/api/fridges', (req, res) => {
+  try {
+    const { status } = req.query;
+
+    let query = 'SELECT * FROM fridges';
+    const params = [];
+
+    if (status) {
+      query += ' WHERE status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY fridge_number';
+
+    const fridges = db.prepare(query).all(...params);
+
+    res.json({ fridges });
+  } catch (error) {
+    console.error('Error fetching fridges:', error);
+    res.status(500).json({ error: 'Failed to fetch fridges' });
+  }
+});
+
+// GET /api/fridges/stats - Get fridge inventory statistics
+app.get('/api/fridges/stats', (req, res) => {
+  try {
+    const stats = {
+      total: db.prepare('SELECT COUNT(*) as count FROM fridges').get().count,
+      available: db.prepare('SELECT COUNT(*) as count FROM fridges WHERE status = ?').get('available').count,
+      checkedOut: db.prepare('SELECT COUNT(*) as count FROM fridges WHERE status = ?').get('checked_out').count,
+      maintenance: db.prepare('SELECT COUNT(*) as count FROM fridges WHERE status = ?').get('maintenance').count,
+      overdue: db.prepare(`
+        SELECT COUNT(*) as count FROM fridge_checkouts
+        WHERE status = 'active'
+        AND expected_return_date < date('now')
+      `).get().count
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching fridge stats:', error);
+    res.status(500).json({ error: 'Failed to fetch statistics' });
+  }
+});
+
+// GET /api/fridges/checkouts/active - Get all active checkouts
+app.get('/api/fridges/checkouts/active', (req, res) => {
+  try {
+    const checkouts = db.prepare(`
+      SELECT
+        fc.*,
+        f.fridge_number,
+        f.brand,
+        f.model,
+        f.size,
+        CASE
+          WHEN fc.expected_return_date < date('now') THEN 'overdue'
+          ELSE 'active'
+        END as computed_status
+      FROM fridge_checkouts fc
+      JOIN fridges f ON fc.fridge_id = f.id
+      WHERE fc.actual_return_date IS NULL
+      ORDER BY fc.expected_return_date ASC
+    `).all();
+
+    res.json({ checkouts });
+  } catch (error) {
+    console.error('Error fetching active checkouts:', error);
+    res.status(500).json({ error: 'Failed to fetch checkouts' });
+  }
+});
+
+// POST /api/fridges/checkout - Check out a fridge to a student
+app.post('/api/fridges/checkout', (req, res) => {
+  try {
+    const {
+      fridgeId,
+      studentName,
+      studentEmail,
+      studentId,
+      housingAssignment,
+      phoneNumber,
+      expectedReturnDate,
+      conditionAtCheckout,
+      notesCheckout,
+      checkedOutBy
+    } = req.body;
+
+    // Check if fridge exists and is available
+    const fridge = db.prepare('SELECT * FROM fridges WHERE id = ? AND status = ?')
+      .get(fridgeId, 'available');
+
+    if (!fridge) {
+      return res.status(400).json({ error: 'Fridge not available for checkout' });
+    }
+
+    // Create checkout record
+    const checkoutResult = db.prepare(`
+      INSERT INTO fridge_checkouts (
+        fridge_id, student_name, student_email, student_id,
+        housing_assignment, phone_number, expected_return_date,
+        condition_at_checkout, notes_checkout, checked_out_by, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+    `).run(
+      fridgeId,
+      studentName,
+      studentEmail,
+      studentId || null,
+      housingAssignment,
+      phoneNumber || null,
+      expectedReturnDate,
+      conditionAtCheckout,
+      notesCheckout || null,
+      checkedOutBy || 'system'
+    );
+
+    // Update fridge status
+    db.prepare('UPDATE fridges SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run('checked_out', fridgeId);
+
+    const checkout = db.prepare('SELECT * FROM fridge_checkouts WHERE id = ?')
+      .get(checkoutResult.lastInsertRowid);
+
+    res.status(201).json(checkout);
+  } catch (error) {
+    console.error('Error checking out fridge:', error);
+    res.status(500).json({ error: 'Failed to checkout fridge' });
+  }
+});
+
+// PATCH /api/fridges/checkout/:id/return - Check in a returned fridge
+app.patch('/api/fridges/checkout/:id/return', (req, res) => {
+  try {
+    const checkoutId = parseInt(req.params.id);
+    const { conditionAtReturn, notesReturn, checkedInBy } = req.body;
+
+    // Get checkout record
+    const checkout = db.prepare(`
+      SELECT * FROM fridge_checkouts WHERE id = ? AND actual_return_date IS NULL
+    `).get(checkoutId);
+
+    if (!checkout) {
+      return res.status(404).json({ error: 'Active checkout not found' });
+    }
+
+    // Update checkout record
+    db.prepare(`
+      UPDATE fridge_checkouts
+      SET actual_return_date = CURRENT_TIMESTAMP,
+          condition_at_return = ?,
+          notes_return = ?,
+          checked_in_by = ?,
+          status = 'returned',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      conditionAtReturn,
+      notesReturn || null,
+      checkedInBy || 'system',
+      checkoutId
+    );
+
+    // Update fridge status and condition
+    const newFridgeStatus = conditionAtReturn === 'Needs Repair' || conditionAtReturn === 'Damaged'
+      ? 'maintenance'
+      : 'available';
+
+    const newCondition = conditionAtReturn === 'Lost'
+      ? 'Needs Repair'
+      : conditionAtReturn;
+
+    db.prepare(`
+      UPDATE fridges
+      SET status = ?,
+          condition = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(newFridgeStatus, newCondition, checkout.fridge_id);
+
+    const updatedCheckout = db.prepare('SELECT * FROM fridge_checkouts WHERE id = ?')
+      .get(checkoutId);
+
+    res.json(updatedCheckout);
+  } catch (error) {
+    console.error('Error checking in fridge:', error);
+    res.status(500).json({ error: 'Failed to check in fridge' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`\n🚀 ReUSE Store API Server running at http://localhost:${PORT}`);
@@ -716,7 +910,12 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/verification/checkouts    - Get grouped checkouts for verification`);
   console.log(`   PATCH /api/verification/checkouts/:checkoutId - Update checkout verification status`);
   console.log(`   GET  /api/analytics/top-items       - Get top items (optional ?year=)`);
-  console.log(`   GET  /api/items/search              - Search items (required ?query=)\n`);
+  console.log(`   GET  /api/items/search              - Search items (required ?query=)`);
+  console.log(`   GET  /api/fridges                   - Get all fridges (optional ?status=)`);
+  console.log(`   GET  /api/fridges/stats             - Get fridge inventory statistics`);
+  console.log(`   GET  /api/fridges/checkouts/active  - Get all active fridge checkouts`);
+  console.log(`   POST /api/fridges/checkout          - Check out a fridge to a student`);
+  console.log(`   PATCH /api/fridges/checkout/:id/return - Check in a returned fridge\n`);
 });
 
 // Graceful shutdown

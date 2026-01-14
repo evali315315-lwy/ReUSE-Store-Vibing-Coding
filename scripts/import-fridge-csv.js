@@ -46,7 +46,7 @@ function parseCSV(filePath) {
 }
 
 // Initialize database
-const dbPath = join(__dirname, '..', 'backend', 'src', 'db', 'reuse-store.db');
+const dbPath = join(__dirname, '..', 'database', 'reuse-store.db');
 const db = new Database(dbPath);
 
 console.log('Starting fridge CSV import...\n');
