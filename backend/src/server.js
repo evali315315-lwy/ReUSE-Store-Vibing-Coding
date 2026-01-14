@@ -10,6 +10,8 @@ import categoriesRouter from './routes/categories.js';
 import productsRouter from './routes/products.js';
 import uploadRouter from './routes/upload.js';
 import importRouter from './routes/import.js';
+import verificationRouter from './routes/verification.js';
+import fridgesRouter from './routes/fridges.js';
 
 // Import middleware
 import { sanitizeStrings } from './middleware/validation.js';
@@ -62,6 +64,8 @@ app.use('/api/categories', categoriesRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/import', importRouter);
+app.use('/api/verification', verificationRouter);
+app.use('/api/fridges', fridgesRouter);
 
 // 404 handler
 app.use(notFoundHandler);
