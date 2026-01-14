@@ -294,26 +294,6 @@ const PhotoVerification = () => {
             </div>
           ) : (
             <>
-              {/* Progress Indicator */}
-              {items.length > 0 && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      Item {currentIndex + 1} of {items.length}
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      {Math.round(((currentIndex + 1) / items.length) * 100)}% Complete
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-eco-primary-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${((currentIndex + 1) / items.length) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Swipe Card */}
               {currentItem ? (
                 <div className="mb-8">
