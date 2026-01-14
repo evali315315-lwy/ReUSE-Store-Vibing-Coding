@@ -101,8 +101,29 @@ app.get('/api/checkouts', (req, res) => {
 
     const checkouts = db.prepare(query).all(...params, limit, offset);
 
+    // Fetch items with fridge information for each checkout
+    const checkoutsWithItems = checkouts.map(checkout => {
+      const items = db.prepare(`
+        SELECT
+          items.*,
+          fridges.company as fridge_company,
+          fridges.model as fridge_model,
+          fridges.size as fridge_size,
+          fridges.condition as fridge_condition
+        FROM items
+        LEFT JOIN fridges ON items.fridge_id = fridges.id
+        WHERE items.checkout_id = ?
+        ORDER BY items.id
+      `).all(checkout.id);
+
+      return {
+        ...checkout,
+        items
+      };
+    });
+
     res.json({
-      checkouts,
+      checkouts: checkoutsWithItems,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -162,7 +183,14 @@ app.get('/api/verification/checkouts', (req, res) => {
       const checkoutIds = checkouts.map(c => c.id);
       const placeholders = checkoutIds.map(() => '?').join(',');
       const allItems = db.prepare(`
-        SELECT * FROM items
+        SELECT
+          items.*,
+          fridges.company as fridge_company,
+          fridges.model as fridge_model,
+          fridges.size as fridge_size,
+          fridges.condition as fridge_condition
+        FROM items
+        LEFT JOIN fridges ON items.fridge_id = fridges.id
         WHERE checkout_id IN (${placeholders})
         ORDER BY checkout_id ASC, id ASC
       `).all(...checkoutIds);

@@ -478,6 +478,20 @@ function DatabaseViewer() {
                                   <div key={item.id} className="flex justify-between items-center border-b border-eco-teal-200 pb-2">
                                     <div>
                                       <p className="font-medium">{item.item_name}</p>
+                                      {item.fridge_company && (
+                                        <p className="text-sm font-semibold text-eco-teal-700">
+                                          Company: {item.fridge_company}
+                                        </p>
+                                      )}
+                                      {item.fridge_model && (
+                                        <p className="text-sm text-gray-600">Model: {item.fridge_model}</p>
+                                      )}
+                                      {item.fridge_size && (
+                                        <p className="text-sm text-gray-600">Size: {item.fridge_size}</p>
+                                      )}
+                                      {item.fridge_condition && (
+                                        <p className="text-sm text-gray-600">Condition: {item.fridge_condition}</p>
+                                      )}
                                       {item.description && (
                                         <p className="text-sm text-gray-600">{item.description}</p>
                                       )}
