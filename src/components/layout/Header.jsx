@@ -1,21 +1,25 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { Leaf, LogIn, LogOut, Shield, UserCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { Leaf, ChevronDown, Users, Briefcase, Shield } from 'lucide-react';
 import squirrelLogo from '../../assets/squirrel.svg';
-import { useAuth } from '../../contexts/AuthContext';
+import { useVersion } from '../../contexts/VersionContext';
 
 function Header() {
-  const navigate = useNavigate();
-  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const { version, changeVersion } = useVersion();
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  const handleLogout = async () => {
-    const result = await logout();
-    if (result.success) {
-      toast.success('Logged out successfully');
-      navigate('/');
-    } else {
-      toast.error('Failed to logout');
-    }
+  const versions = [
+    { id: 'public', name: 'General Public', icon: Users, color: 'text-blue-500' },
+    { id: 'worker', name: 'Student Worker', icon: Briefcase, color: 'text-green-500' },
+    { id: 'admin', name: 'Administrator', icon: Shield, color: 'text-purple-500' }
+  ];
+
+  const currentVersion = versions.find(v => v.id === version);
+  const CurrentIcon = currentVersion.icon;
+
+  const handleVersionChange = (newVersion) => {
+    changeVersion(newVersion);
+    setShowDropdown(false);
   };
 
   return (
@@ -34,6 +38,7 @@ function Header() {
 
           {/* Navigation Tabs */}
           <div className="flex items-center gap-4">
+            {/* Public Tabs - Always visible */}
             <NavLink
               to="/"
               className={({ isActive }) =>
@@ -71,76 +76,89 @@ function Header() {
               Statistics
             </NavLink>
 
-            {isAuthenticated ? (
-              <>
-                <NavLink
-                  to="/donations"
-                  className={({ isActive }) =>
-                    `px-4 py-2 rounded-md font-semibold transition-colors ${
-                      isActive
-                        ? 'bg-white text-eco-primary-600'
-                        : 'hover:bg-eco-primary-500'
-                    }`
-                  }
-                >
-                  Log Donations
-                </NavLink>
-
-                <NavLink
-                  to="/verification"
-                  className={({ isActive }) =>
-                    `px-4 py-2 rounded-md font-semibold transition-colors ${
-                      isActive
-                        ? 'bg-white text-eco-primary-600'
-                        : 'hover:bg-eco-primary-500'
-                    }`
-                  }
-                >
-                  Photo Verification
-                </NavLink>
-
-                {/* Role Badge */}
-                <div className="flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-sm">
-                  {isAdmin ? (
-                    <>
-                      <Shield className="w-4 h-4" />
-                      <span className="font-semibold">Admin</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserCircle className="w-4 h-4" />
-                      <span className="font-semibold">Worker</span>
-                    </>
-                  )}
-                </div>
-
-                {/* Logout Button */}
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md font-semibold transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </>
-            ) : (
+            {/* Student Worker Tab - Visible for worker and admin versions */}
+            {(version === 'worker' || version === 'admin') && (
               <NavLink
-                to="/login"
+                to="/donations"
                 className={({ isActive }) =>
-                  `flex items-center gap-2 px-4 py-2 rounded-md font-semibold transition-colors ${
+                  `px-4 py-2 rounded-md font-semibold transition-colors ${
                     isActive
                       ? 'bg-white text-eco-primary-600'
-                      : 'bg-white/10 hover:bg-white/20'
+                      : 'hover:bg-eco-primary-500'
                   }`
                 }
               >
-                <LogIn className="w-4 h-4" />
-                Login
+                Log Donations
               </NavLink>
             )}
+
+            {/* Admin Tab - Only visible for admin version */}
+            {version === 'admin' && (
+              <NavLink
+                to="/verification"
+                className={({ isActive }) =>
+                  `px-4 py-2 rounded-md font-semibold transition-colors ${
+                    isActive
+                      ? 'bg-white text-eco-primary-600'
+                      : 'hover:bg-eco-primary-500'
+                  }`
+                }
+              >
+                Photo Verification
+              </NavLink>
+            )}
+
+            {/* Version Switcher Dropdown */}
+            <div className="relative ml-4">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md font-semibold transition-colors border border-white/30"
+              >
+                <CurrentIcon className="w-4 h-4" />
+                <span className="hidden md:inline">{currentVersion.name}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                  {versions.map((v) => {
+                    const Icon = v.icon;
+                    const isSelected = version === v.id;
+
+                    return (
+                      <button
+                        key={v.id}
+                        onClick={() => handleVersionChange(v.id)}
+                        className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left ${
+                          isSelected ? 'bg-eco-primary-50' : ''
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 ${v.color}`} />
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-800">{v.name}</div>
+                        </div>
+                        {isSelected && (
+                          <div className="text-xs bg-eco-primary-600 text-white px-2 py-1 rounded-full">
+                            ACTIVE
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </nav>
+
+      {/* Click outside to close dropdown */}
+      {showDropdown && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowDropdown(false)}
+        />
+      )}
     </header>
   );
 }
