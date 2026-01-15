@@ -137,10 +137,13 @@ function CheckOutTab() {
         items: selectedItems.map(item => ({
           type: 'item',
           itemId: item.id,
+          name: item.name,
+          itemName: item.name,
           quantity: item.quantity
         })),
         checkedOutBy: 'worker@haverford.edu', // TODO: Get from auth context
-        notes: data.notes || null
+        notes: data.notes || null,
+        checkoutPhoto: checkoutPhoto // Send the base64 photo
       };
 
       const result = await checkoutAPI.createCheckout(checkoutData);
