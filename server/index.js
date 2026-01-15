@@ -3,9 +3,14 @@ import cors from 'cors';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import googleDriveService from './services/googleDrive.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env.local
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const app = express();
 const PORT = 3001;
@@ -16,7 +21,7 @@ const db = new Database(DB_PATH, { readonly: false });
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increased limit for base64 images
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -168,7 +173,7 @@ app.get('/api/verification/checkouts', (req, res) => {
       JOIN items ON checkouts.id = items.checkout_id
       ${checkoutWhereClause}
       AND ${itemWhereClause}
-      ORDER BY checkouts.date DESC, checkouts.id DESC
+      ORDER BY checkouts.created_at DESC, checkouts.id DESC
       LIMIT ? OFFSET ?
     `;
 
@@ -1721,9 +1726,9 @@ app.patch('/api/fridges/:id', (req, res) => {
 
 // Check-Out Endpoints
 // Create check-out transaction
-app.post('/api/checkouts-out', (req, res) => {
+app.post('/api/checkouts-out', async (req, res) => {
   try {
-    const { student, items, checkedOutBy, notes } = req.body;
+    const { student, items, checkedOutBy, notes, checkoutPhoto } = req.body;
 
     if (!student || !student.name || !student.email) {
       return res.status(400).json({ error: 'Student information is required' });
@@ -1733,67 +1738,100 @@ app.post('/api/checkouts-out', (req, res) => {
       return res.status(400).json({ error: 'At least one item is required' });
     }
 
+    // Upload photo to Google Drive if provided (before transaction)
+    let photoUrl = null;
+    if (checkoutPhoto) {
+      try {
+        const timestamp = Date.now();
+        const filename = `checkout-${student.email}-${timestamp}.jpg`;
+        photoUrl = await googleDriveService.uploadPhoto(checkoutPhoto, filename);
+        console.log(`📷 Photo uploaded: ${photoUrl}`);
+      } catch (photoError) {
+        console.error('Error uploading photo:', photoError);
+        // Continue with checkout even if photo upload fails
+      }
+    }
+
     // Start transaction
     db.prepare('BEGIN').run();
 
     try {
-      // Create or update student
-      const existingStudent = db.prepare('SELECT id FROM students WHERE email = ?').get(student.email);
-      let studentId;
+      // Get current year range
+      const currentYear = new Date().getFullYear();
+      const yearRange = `${currentYear}-${currentYear + 1}`;
+      const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-      if (existingStudent) {
-        studentId = existingStudent.id;
-        db.prepare(`
-          UPDATE students
-          SET name = ?, housing_assignment = ?, graduation_year = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `).run(student.name, student.housing || null, student.gradYear || null, studentId);
-      } else {
-        const result = db.prepare(`
-          INSERT INTO students (name, email, housing_assignment, graduation_year)
-          VALUES (?, ?, ?, ?)
-        `).run(student.name, student.email, student.housing || null, student.gradYear || null);
-        studentId = result.lastInsertRowid;
+      // Build notes with photo URL
+      let finalNotes = notes || '';
+      if (photoUrl) {
+        finalNotes = finalNotes ? `${finalNotes}\nPhoto: ${photoUrl}` : `Photo: ${photoUrl}`;
       }
 
-      // Create checkout record
+      // Create checkout record in checkouts table
       const checkoutResult = db.prepare(`
-        INSERT INTO checkouts_out (student_id, checked_out_by, notes)
-        VALUES (?, ?, ?)
-      `).run(studentId, checkedOutBy || null, notes || null);
+        INSERT INTO checkouts (
+          year_range,
+          date,
+          owner_name,
+          email,
+          housing_assignment,
+          graduation_year,
+          total_items,
+          notes,
+          needs_approval
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+      `).run(
+        yearRange,
+        date,
+        student.name,
+        student.email,
+        student.housing || null,
+        student.gradYear || null,
+        items.reduce((sum, item) => sum + (item.quantity || 1), 0),
+        finalNotes
+      );
 
       const checkoutId = checkoutResult.lastInsertRowid;
 
-      // Add checkout items and update inventory
+      // Add items to items table and update inventory
       for (const item of items) {
-        if (item.type === 'item') {
-          // Add checkout item
-          db.prepare(`
-            INSERT INTO checkout_items (checkout_id, item_id, quantity)
-            VALUES (?, ?, ?)
-          `).run(checkoutId, item.itemId, item.quantity);
+        // Insert item record
+        db.prepare(`
+          INSERT INTO items (
+            checkout_id,
+            year_range,
+            item_name,
+            item_quantity,
+            verification_status,
+            image_url,
+            created_at
+          )
+          VALUES (?, ?, ?, ?, 'pending', ?, datetime('now'))
+        `).run(
+          checkoutId,
+          yearRange,
+          item.name,
+          item.quantity || 1,
+          photoUrl
+        );
 
-          // Update inventory quantity
-          db.prepare(`
-            UPDATE inventory_items
-            SET available_quantity = available_quantity - ?
-            WHERE id = ?
-          `).run(item.quantity, item.itemId);
+        // Update inventory quantity (case-insensitive match)
+        // First, try to find the item with case-insensitive match
+        const inventoryItem = db.prepare(`
+          SELECT item_name FROM inventory WHERE LOWER(item_name) = LOWER(?)
+        `).get(item.name);
 
-        } else if (item.type === 'fridge') {
-          // Add checkout item
+        if (inventoryItem) {
+          // Update using the exact case from inventory
           db.prepare(`
-            INSERT INTO checkout_items (checkout_id, fridge_id, quantity)
-            VALUES (?, ?, 1)
-          `).run(checkoutId, item.fridgeId);
-
-          // Update fridge status
-          db.prepare(`
-            UPDATE fridges
-            SET status = 'checked_out'
-            WHERE id = ?
-          `).run(item.fridgeId);
+            UPDATE inventory
+            SET quantity = quantity - ?
+            WHERE item_name = ?
+          `).run(item.quantity || 1, inventoryItem.item_name);
         }
+        // If item doesn't exist in inventory, we can optionally create it
+        // For now, we just skip the update (item isn't tracked)
       }
 
       db.prepare('COMMIT').run();
@@ -2107,7 +2145,10 @@ app.patch('/api/settings/:key', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  // Initialize Google Drive service
+  await googleDriveService.initialize();
+
   console.log(`\n🚀 ReUSE Store API Server running at http://localhost:${PORT}`);
   console.log(`📊 API Endpoints:`);
   console.log(`   GET  /api/health                    - Health check`);
