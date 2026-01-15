@@ -983,7 +983,7 @@ app.get('/api/fridges/checkouts/active', (req, res) => {
         fc.expected_return_date,
         fc.status
       FROM fridge_checkouts fc
-      JOIN fridge_inventory fi ON fi.id = fc.fridge_id
+      JOIN fridge_inventory fi ON fi.fridge_number = fc.fridge_id
       WHERE fc.status = 'active'
       ORDER BY fc.checkout_date DESC
     `).all();
