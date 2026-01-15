@@ -1316,15 +1316,44 @@ app.patch('/api/fridges/checkout/:id/return', (req, res) => {
 
       // Update fridge status
       fridges.forEach(f => {
-        const newStatus = (conditionAtReturn === 'Needs Repair' || conditionAtReturn === 'Damaged')
-          ? 'maintenance'
-          : 'available';
+        const needsMaintenance = conditionAtReturn === 'Needs Repair' || conditionAtReturn === 'Damaged' || conditionAtReturn === 'Poor';
+        const newStatus = needsMaintenance ? 'maintenance' : 'available';
 
         db.prepare(`
           UPDATE fridge_inventory
           SET status = ?, condition = ?, current_checkout_id = NULL, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(newStatus, conditionAtReturn || 'Good', f.fridge_id);
+
+        // Create maintenance record if needed
+        if (needsMaintenance) {
+          // Get fridge info from fridge_inventory
+          const fridgeInfo = db.prepare('SELECT fridge_number FROM fridge_inventory WHERE id = ?').get(f.fridge_id);
+
+          if (fridgeInfo) {
+            // Check if fridge exists in fridges table (foreign key requirement)
+            // Note: fridges.fridge_number is TEXT, fridge_inventory.fridge_number is INTEGER
+            const fridgeInFridgesTable = db.prepare('SELECT id FROM fridges WHERE fridge_number = ?').get(String(fridgeInfo.fridge_number));
+
+            if (fridgeInFridgesTable) {
+              db.prepare(`
+                INSERT INTO fridge_maintenance (
+                  fridge_id,
+                  maintenance_type,
+                  description,
+                  performed_by,
+                  maintenance_date
+                )
+                VALUES (?, ?, ?, ?, date('now'))
+              `).run(
+                fridgeInFridgesTable.id,
+                'Repair Required',
+                `Returned in ${conditionAtReturn} condition. ${notesReturn || ''}`,
+                checkedInBy || 'System'
+              );
+            }
+          }
+        }
       });
 
       db.prepare('COMMIT').run();
@@ -1370,7 +1399,20 @@ app.get('/api/fridges/:number', (req, res) => {
 app.patch('/api/fridges/:id', (req, res) => {
   try {
     const fridgeId = parseInt(req.params.id);
-    const { brand, size, color, condition, status, notes } = req.body;
+    let { brand, size, color, condition, status, notes, performedBy } = req.body;
+
+    // Get current fridge data
+    const currentFridge = db.prepare('SELECT * FROM fridge_inventory WHERE id = ?').get(fridgeId);
+
+    if (!currentFridge) {
+      return res.status(404).json({ error: 'Fridge not found' });
+    }
+
+    // If condition is "Needs Repair" and fridge is not checked out, automatically set status to "maintenance"
+    const needsMaintenance = condition === 'Needs Repair' || condition === 'Poor' || condition === 'Damaged';
+    if (needsMaintenance && currentFridge.status !== 'checked_out') {
+      status = 'maintenance';
+    }
 
     // Build update query dynamically
     const updates = [];
@@ -1414,13 +1456,44 @@ app.patch('/api/fridges/:id', (req, res) => {
       WHERE id = ?
     `;
 
-    const result = db.prepare(query).run(...params);
+    db.prepare('BEGIN').run();
 
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Fridge not found' });
+    try {
+      const result = db.prepare(query).run(...params);
+
+      // If status changed to maintenance, create a maintenance record
+      if (status === 'maintenance' && currentFridge.status !== 'maintenance') {
+        // Check if fridge exists in fridges table (foreign key requirement)
+        // Note: fridges.fridge_number is TEXT, fridge_inventory.fridge_number is INTEGER
+        const fridgeInFridgesTable = db.prepare('SELECT id FROM fridges WHERE fridge_number = ?').get(String(currentFridge.fridge_number));
+
+        if (fridgeInFridgesTable) {
+          db.prepare(`
+            INSERT INTO fridge_maintenance (
+              fridge_id,
+              maintenance_type,
+              description,
+              performed_by,
+              maintenance_date
+            )
+            VALUES (?, ?, ?, ?, date('now'))
+          `).run(
+            fridgeInFridgesTable.id,
+            'Repair Required',
+            condition ? `Condition: ${condition}. ${notes || ''}` : notes || 'Marked for maintenance',
+            performedBy || 'System'
+          );
+        }
+      }
+
+      db.prepare('COMMIT').run();
+      res.json({ success: true, message: 'Fridge updated successfully' });
+
+    } catch (error) {
+      db.prepare('ROLLBACK').run();
+      throw error;
     }
 
-    res.json({ success: true, message: 'Fridge updated successfully' });
   } catch (error) {
     console.error('Error updating fridge:', error);
     res.status(500).json({ error: 'Failed to update fridge' });
