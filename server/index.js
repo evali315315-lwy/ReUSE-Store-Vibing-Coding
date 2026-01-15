@@ -968,15 +968,20 @@ app.post('/api/inventory', (req, res) => {
 });
 
 // Fridge Management Endpoints
-// Get fridge attribute options (from dynamic tables)
+// Get fridge attribute options (from fridges table)
 app.get('/api/fridges/attributes', (req, res) => {
   try {
-    const sizes = db.prepare('SELECT name FROM fridge_sizes ORDER BY id').all().map(r => r.name);
-    const colors = db.prepare('SELECT name FROM fridge_colors ORDER BY id').all().map(r => r.name);
-    const brands = db.prepare('SELECT name FROM fridge_brands ORDER BY name').all().map(r => r.name);
-    const conditions = db.prepare('SELECT name FROM fridge_conditions ORDER BY id').all().map(r => r.name);
+    // Get distinct values directly from fridges table
+    const sizes = db.prepare('SELECT DISTINCT size FROM fridges WHERE size IS NOT NULL ORDER BY size').all().map(r => r.size);
+    const brands = db.prepare('SELECT DISTINCT brand FROM fridges WHERE brand IS NOT NULL ORDER BY brand').all().map(r => r.brand);
+    const conditions = db.prepare('SELECT DISTINCT condition FROM fridges WHERE condition IS NOT NULL ORDER BY condition').all().map(r => r.condition);
 
-    res.json({ sizes, colors, brands, conditions });
+    res.json({
+      sizes,
+      colors: [], // No color field in fridges table
+      brands,
+      conditions
+    });
   } catch (error) {
     console.error('Error fetching fridge attributes:', error);
     res.status(500).json({ error: 'Failed to fetch fridge attributes' });
