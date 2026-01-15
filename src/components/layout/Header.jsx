@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Leaf, ChevronDown, Users, Briefcase, Shield } from 'lucide-react';
 import squirrelLogo from '../../assets/squirrel.svg';
+import reuseLogo from '../../assets/(RE)use Store Logo for Email (2) (1).png';
 import { useVersion } from '../../contexts/VersionContext';
 
 function Header() {
@@ -26,12 +27,13 @@ function Header() {
     <header className="bg-gradient-to-r from-eco-primary-600 via-eco-teal to-eco-primary-700 text-white shadow-lg">
       <nav className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo/Brand with Squirrel */}
+          {/* Logo/Brand with Squirrel and ReUSE Logo */}
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="absolute inset-0 bg-white rounded-full blur-md opacity-20"></div>
               <img src={squirrelLogo} alt="Black Squirrel Mascot" className="w-12 h-12 relative z-10" />
             </div>
+            <img src={reuseLogo} alt="ReUSE Store Logo" className="h-12 w-auto object-contain" />
             <Leaf className="w-8 h-8" />
             <h1 className="text-2xl font-bold font-display">ReUSE Store</h1>
           </div>
