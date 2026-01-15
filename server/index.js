@@ -769,6 +769,7 @@ app.get('/api/students/search', (req, res) => {
     let query;
     if (withFridgesOnly === 'true') {
       // Only return students with active fridge checkouts
+      // Fridge checkouts are identified by items with name like "Fridge #%"
       query = `
         SELECT DISTINCT
           c.id,
@@ -777,9 +778,10 @@ app.get('/api/students/search', (req, res) => {
           c.housing_assignment,
           c.graduation_year as gradYear
         FROM checkouts c
-        JOIN fridge_checkouts fc ON fc.owner_email = c.email
+        JOIN items i ON i.checkout_id = c.id
         WHERE (c.owner_name LIKE ? OR c.email LIKE ?)
-          AND fc.status = 'checked_out'
+          AND i.item_name LIKE 'Fridge #%'
+          AND i.verification_status = 'pending'
         ORDER BY c.owner_name
         LIMIT 50
       `;
@@ -1037,24 +1039,28 @@ app.post('/api/fridges/attributes/conditions', (req, res) => {
 // GET /api/fridges/checkouts/active - Get all active checkouts (MUST BE BEFORE :studentEmail route)
 app.get('/api/fridges/checkouts/active', (req, res) => {
   try {
+    // Query checkouts table where items have names like "Fridge #%"
+    // These are migrated from old fridge_checkouts table
     const checkouts = db.prepare(`
       SELECT
-        fc.id,
-        fi.fridge_number,
-        fi.brand,
-        fi.size,
-        fi.color,
-        fi.condition,
-        fc.student_name,
-        fc.student_email,
-        fc.housing_assignment,
-        fc.checkout_date,
-        fc.expected_return_date,
-        fc.status
-      FROM fridge_checkouts fc
-      JOIN fridge_inventory fi ON fi.fridge_number = fc.fridge_id
-      WHERE fc.status = 'active'
-      ORDER BY fc.checkout_date DESC
+        c.id,
+        i.item_name as fridge_identifier,
+        f.fridge_number,
+        f.brand,
+        f.size,
+        f.color,
+        f.condition,
+        c.owner_name as student_name,
+        c.email as student_email,
+        c.housing_assignment,
+        c.date as checkout_date,
+        i.verification_status
+      FROM checkouts c
+      JOIN items i ON i.checkout_id = c.id
+      LEFT JOIN fridges f ON i.item_name = 'Fridge #' || f.fridge_number
+      WHERE i.item_name LIKE 'Fridge #%'
+        AND i.verification_status = 'pending'
+      ORDER BY c.date DESC
     `).all();
 
     res.json({ checkouts });
@@ -1071,21 +1077,22 @@ app.get('/api/fridges/checkouts/:studentEmail', (req, res) => {
 
     const query = `
       SELECT
-        fi.id as fridgeId,
-        fi.fridge_number as fridgeNumber,
-        fi.brand,
-        fi.has_freezer as hasFreezer,
-        fi.size,
-        fi.color,
-        fi.condition,
-        co.checkout_date as checkoutDate,
-        co.id as checkoutId
-      FROM fridge_inventory fi
-      JOIN checkout_items ci ON ci.fridge_id = fi.id
-      JOIN checkouts_out co ON co.id = ci.checkout_id
-      JOIN students s ON s.id = co.student_id
-      WHERE s.email = ? AND co.status = 'active' AND fi.status = 'checked_out'
-      ORDER BY co.checkout_date DESC
+        f.id as fridgeId,
+        f.fridge_number as fridgeNumber,
+        f.brand,
+        f.has_freezer as hasFreezer,
+        f.size,
+        f.color,
+        f.condition,
+        c.date as checkoutDate,
+        c.id as checkoutId
+      FROM checkouts c
+      JOIN items i ON i.checkout_id = c.id
+      JOIN fridges f ON i.item_name = 'Fridge #' || f.fridge_number
+      WHERE c.email = ?
+        AND i.item_name LIKE 'Fridge #%'
+        AND i.verification_status = 'pending'
+      ORDER BY c.date DESC
     `;
 
     const checkouts = db.prepare(query).all(studentEmail);
@@ -1108,45 +1115,37 @@ app.post('/api/fridges/return', (req, res) => {
     db.prepare('BEGIN').run();
 
     try {
-      // Find the active checkout
-      const checkout = db.prepare(`
-        SELECT co.id, co.student_id
-        FROM checkouts_out co
-        JOIN students s ON s.id = co.student_id
-        JOIN checkout_items ci ON ci.checkout_id = co.id
-        WHERE s.email = ? AND ci.fridge_id = ? AND co.status = 'active'
-        LIMIT 1
-      `).get(studentEmail, fridgeId);
+      // Find the fridge to get its number
+      const fridge = db.prepare('SELECT fridge_number FROM fridges WHERE id = ?').get(fridgeId);
 
-      if (!checkout) {
+      if (!fridge) {
+        db.prepare('ROLLBACK').run();
+        return res.status(404).json({ error: 'Fridge not found' });
+      }
+
+      // Find the active checkout item for this fridge
+      const item = db.prepare(`
+        SELECT i.id as itemId, i.checkout_id, c.id as checkoutId
+        FROM items i
+        JOIN checkouts c ON c.id = i.checkout_id
+        WHERE c.email = ?
+          AND i.item_name = ?
+          AND i.verification_status = 'pending'
+        LIMIT 1
+      `).get(studentEmail, `Fridge #${fridge.fridge_number}`);
+
+      if (!item) {
         db.prepare('ROLLBACK').run();
         return res.status(404).json({ error: 'No active checkout found for this fridge and student' });
       }
 
+      // Update item status to returned
+      db.prepare('UPDATE items SET status = ?, return_date = CURRENT_TIMESTAMP WHERE id = ?')
+        .run('returned', item.itemId);
+
       // Update fridge status to available
-      db.prepare('UPDATE fridge_inventory SET status = ?, current_checkout_id = NULL WHERE id = ?')
+      db.prepare('UPDATE fridges SET status = ? WHERE id = ?')
         .run('available', fridgeId);
-
-      // Check if this was the only item in the checkout
-      const itemCount = db.prepare('SELECT COUNT(*) as count FROM checkout_items WHERE checkout_id = ?')
-        .get(checkout.id).count;
-
-      if (itemCount === 1) {
-        // If only item, mark entire checkout as returned
-        db.prepare('UPDATE checkouts_out SET status = ?, actual_return_date = CURRENT_TIMESTAMP WHERE id = ?')
-          .run('returned', checkout.id);
-      } else {
-        // Otherwise, just remove this item from checkout
-        db.prepare('DELETE FROM checkout_items WHERE checkout_id = ? AND fridge_id = ?')
-          .run(checkout.id, fridgeId);
-      }
-
-      // Create a check-in record for the returned fridge
-      const checkinStmt = db.prepare('INSERT INTO checkins (checked_in_by, notes) VALUES (?, ?)');
-      const checkinResult = checkinStmt.run(returnedBy || 'system', `Fridge return from ${studentEmail}`);
-
-      db.prepare('INSERT INTO checkin_items (checkin_id, fridge_id, quantity) VALUES (?, ?, 1)')
-        .run(checkinResult.lastInsertRowid, fridgeId);
 
       db.prepare('COMMIT').run();
 
@@ -1154,7 +1153,7 @@ app.post('/api/fridges/return', (req, res) => {
         success: true,
         message: 'Fridge returned successfully',
         fridgeId,
-        checkoutId: checkout.id
+        checkoutId: item.checkoutId
       });
     } catch (error) {
       db.prepare('ROLLBACK').run();
@@ -1178,13 +1177,13 @@ app.post('/api/fridges/checkin', (req, res) => {
     db.prepare('BEGIN').run();
 
     try {
-      // Get next fridge number
-      const maxFridge = db.prepare('SELECT MAX(fridge_number) as max FROM fridge_inventory').get();
-      const nextFridgeNumber = (maxFridge.max || 0) + 1;
+      // Get next fridge number (as TEXT)
+      const maxFridge = db.prepare('SELECT MAX(CAST(fridge_number AS INTEGER)) as max FROM fridges').get();
+      const nextFridgeNumber = String((maxFridge.max || 0) + 1);
 
       // Insert new fridge
       const fridgeStmt = db.prepare(`
-        INSERT INTO fridge_inventory
+        INSERT INTO fridges
         (fridge_number, has_freezer, size, color, brand, condition, notes, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'available')
       `);
@@ -1198,24 +1197,13 @@ app.post('/api/fridges/checkin', (req, res) => {
         notes || null
       );
 
-      // Create check-in record
-      const checkinStmt = db.prepare('INSERT INTO checkins (checked_in_by, notes) VALUES (?, ?)');
-      const checkinResult = checkinStmt.run(
-        checkedInBy || 'worker@haverford.edu',
-        `New fridge #${nextFridgeNumber} added to inventory`
-      );
-
-      db.prepare('INSERT INTO checkin_items (checkin_id, fridge_id, quantity) VALUES (?, ?, 1)')
-        .run(checkinResult.lastInsertRowid, fridgeResult.lastInsertRowid);
-
       db.prepare('COMMIT').run();
 
       res.json({
         success: true,
         message: 'Fridge checked in successfully',
         fridgeId: fridgeResult.lastInsertRowid,
-        fridgeNumber: nextFridgeNumber,
-        checkinId: checkinResult.lastInsertRowid
+        fridgeNumber: nextFridgeNumber
       });
     } catch (error) {
       db.prepare('ROLLBACK').run();
@@ -1234,7 +1222,7 @@ app.get('/api/fridges/available', (req, res) => {
 
     let query = `
       SELECT id, fridge_number, has_freezer, size, color, brand, condition
-      FROM fridge_inventory
+      FROM fridges
       WHERE status = 'available'
     `;
 
@@ -1244,7 +1232,7 @@ app.get('/api/fridges/available', (req, res) => {
       params.push(has_freezer === 'true' ? 1 : 0);
     }
 
-    query += ' ORDER BY fridge_number';
+    query += ' ORDER BY CAST(fridge_number AS INTEGER)';
 
     const fridges = db.prepare(query).all(...params);
     res.json(fridges);
@@ -1258,16 +1246,11 @@ app.get('/api/fridges/available', (req, res) => {
 app.get('/api/fridges/stats', (req, res) => {
   try {
     const stats = {
-      total: db.prepare('SELECT COUNT(*) as count FROM fridge_inventory').get().count,
-      available: db.prepare('SELECT COUNT(*) as count FROM fridge_inventory WHERE status = ?').get('available').count,
-      checkedOut: db.prepare('SELECT COUNT(*) as count FROM fridge_inventory WHERE status = ?').get('checked_out').count,
-      maintenance: db.prepare('SELECT COUNT(*) as count FROM fridge_inventory WHERE status = ?').get('maintenance').count,
-      overdue: db.prepare(`
-        SELECT COUNT(*) as count
-        FROM fridge_checkouts
-        WHERE status = 'active'
-        AND DATE(expected_return_date) < DATE('now')
-      `).get().count
+      total: db.prepare('SELECT COUNT(*) as count FROM fridges').get().count,
+      available: db.prepare('SELECT COUNT(*) as count FROM fridges WHERE status = ?').get('available').count,
+      checkedOut: db.prepare('SELECT COUNT(*) as count FROM fridges WHERE status = ?').get('checked_out').count,
+      maintenance: db.prepare('SELECT COUNT(*) as count FROM fridges WHERE status = ?').get('maintenance').count,
+      overdue: 0  // No longer tracking expected_return_date in new structure
     };
 
     res.json(stats);
@@ -1282,7 +1265,7 @@ app.get('/api/fridges', (req, res) => {
   try {
     const { status } = req.query;
 
-    let query = 'SELECT * FROM fridge_inventory';
+    let query = 'SELECT * FROM fridges';
     const params = [];
 
     if (status) {
@@ -1290,7 +1273,7 @@ app.get('/api/fridges', (req, res) => {
       params.push(status);
     }
 
-    query += ' ORDER BY fridge_number';
+    query += ' ORDER BY CAST(fridge_number AS INTEGER)';
 
     const fridges = db.prepare(query).all(...params);
 
@@ -1309,41 +1292,71 @@ app.post('/api/fridges/checkout', (req, res) => {
       studentName,
       studentEmail,
       housingAssignment,
+      graduationYear,
       checkedOutBy
     } = req.body;
 
     db.prepare('BEGIN').run();
 
     try {
-      // Create or get student
-      let student = db.prepare('SELECT id FROM students WHERE email = ?').get(studentEmail);
+      // Get fridge details
+      const fridge = db.prepare('SELECT fridge_number FROM fridges WHERE id = ?').get(fridgeId);
 
-      if (!student) {
-        const result = db.prepare(`
-          INSERT INTO students (name, email, housing_assignment)
-          VALUES (?, ?, ?)
-        `).run(studentName, studentEmail, housingAssignment || null);
-        student = { id: result.lastInsertRowid };
+      if (!fridge) {
+        db.prepare('ROLLBACK').run();
+        return res.status(404).json({ error: 'Fridge not found' });
       }
 
-      // Create checkout record
-      const checkoutResult = db.prepare(`
-        INSERT INTO checkouts_out (student_id, checked_out_by)
-        VALUES (?, ?)
-      `).run(student.id, checkedOutBy || 'system');
+      // Get current academic year range (e.g., "2025-2026")
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const month = now.getMonth();
+      const yearRange = month >= 7 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
 
-      // Add fridge to checkout
+      // Create checkout record in checkouts table
+      const checkoutResult = db.prepare(`
+        INSERT INTO checkouts (
+          date,
+          owner_name,
+          email,
+          housing_assignment,
+          graduation_year,
+          year_range,
+          needs_approval
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        new Date().toISOString(),
+        studentName,
+        studentEmail,
+        housingAssignment || '',
+        graduationYear || '',
+        yearRange,
+        0  // Fridge checkouts don't need approval
+      );
+
+      // Create item record with fridge identifier
       db.prepare(`
-        INSERT INTO checkout_items (checkout_id, fridge_id, quantity)
-        VALUES (?, ?, 1)
-      `).run(checkoutResult.lastInsertRowid, fridgeId);
+        INSERT INTO items (
+          checkout_id,
+          item_name,
+          item_quantity,
+          year_range,
+          status
+        ) VALUES (?, ?, ?, ?, ?)
+      `).run(
+        checkoutResult.lastInsertRowid,
+        `Fridge #${fridge.fridge_number}`,
+        1,
+        yearRange,
+        'active'
+      );
 
       // Update fridge status
       db.prepare(`
-        UPDATE fridge_inventory
-        SET status = 'checked_out', current_checkout_id = ?, updated_at = CURRENT_TIMESTAMP
+        UPDATE fridges
+        SET status = 'checked_out'
         WHERE id = ?
-      `).run(checkoutResult.lastInsertRowid, fridgeId);
+      `).run(fridgeId);
 
       db.prepare('COMMIT').run();
 
@@ -1363,6 +1376,7 @@ app.post('/api/fridges/checkout', (req, res) => {
 });
 
 // PATCH /api/fridges/checkout/:id/return - Check in a returned fridge
+// NOTE: This endpoint is deprecated - use POST /api/fridges/return instead
 app.patch('/api/fridges/checkout/:id/return', (req, res) => {
   try {
     const checkoutId = parseInt(req.params.id);
@@ -1371,65 +1385,53 @@ app.patch('/api/fridges/checkout/:id/return', (req, res) => {
     db.prepare('BEGIN').run();
 
     try {
-      // Update checkout status
-      db.prepare(`
-        UPDATE checkouts_out
-        SET status = 'returned', actual_return_date = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(checkoutId);
-
-      // Get fridges in this checkout
-      const fridges = db.prepare(`
-        SELECT fridge_id FROM checkout_items WHERE checkout_id = ?
+      // Find items in this checkout that are fridges
+      const fridgeItems = db.prepare(`
+        SELECT i.id as itemId, i.item_name
+        FROM items i
+        WHERE i.checkout_id = ?
+          AND i.item_name LIKE 'Fridge #%'
+          AND i.verification_status = 'pending'
       `).all(checkoutId);
 
-      // Update fridge status
-      fridges.forEach(f => {
+      if (fridgeItems.length === 0) {
+        db.prepare('ROLLBACK').run();
+        return res.status(404).json({ error: 'No active fridge items found in this checkout' });
+      }
+
+      // Update each fridge item status
+      fridgeItems.forEach(item => {
+        // Extract fridge number from item name
+        const fridgeNumber = item.item_name.replace('Fridge #', '');
+
+        // Update item status to returned
+        db.prepare('UPDATE items SET status = ?, return_date = CURRENT_TIMESTAMP WHERE id = ?')
+          .run('returned', item.itemId);
+
+        // Update fridge status and condition
         const needsMaintenance = conditionAtReturn === 'Needs Repair' || conditionAtReturn === 'Damaged' || conditionAtReturn === 'Poor';
         const newStatus = needsMaintenance ? 'maintenance' : 'available';
 
-        db.prepare(`
-          UPDATE fridge_inventory
-          SET status = ?, condition = ?, current_checkout_id = NULL, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `).run(newStatus, conditionAtReturn || 'Good', f.fridge_id);
+        // Update fridge with new condition and status
+        const updateQuery = `
+          UPDATE fridges
+          SET status = ?, condition = ?, notes = ?
+          WHERE fridge_number = ?
+        `;
 
-        // Create maintenance record if needed
-        if (needsMaintenance) {
-          // Get fridge info from fridge_inventory
-          const fridgeInfo = db.prepare('SELECT fridge_number FROM fridge_inventory WHERE id = ?').get(f.fridge_id);
+        const maintenanceNote = needsMaintenance
+          ? `Returned in ${conditionAtReturn} condition. ${notesReturn || ''}. Needs maintenance.`
+          : notesReturn || '';
 
-          if (fridgeInfo) {
-            // Check if fridge exists in fridges table (foreign key requirement)
-            // Note: fridges.fridge_number is TEXT, fridge_inventory.fridge_number is INTEGER
-            const fridgeInFridgesTable = db.prepare('SELECT id FROM fridges WHERE fridge_number = ?').get(String(fridgeInfo.fridge_number));
-
-            if (fridgeInFridgesTable) {
-              db.prepare(`
-                INSERT INTO fridge_maintenance (
-                  fridge_id,
-                  maintenance_type,
-                  description,
-                  performed_by,
-                  maintenance_date
-                )
-                VALUES (?, ?, ?, ?, date('now'))
-              `).run(
-                fridgeInFridgesTable.id,
-                'Repair Required',
-                `Returned in ${conditionAtReturn} condition. ${notesReturn || ''}`,
-                checkedInBy || 'System'
-              );
-            }
-          }
-        }
+        db.prepare(updateQuery).run(newStatus, conditionAtReturn || 'Good', maintenanceNote, fridgeNumber);
       });
 
       db.prepare('COMMIT').run();
 
       res.json({
         success: true,
-        checkoutId
+        checkoutId,
+        itemsProcessed: fridgeItems.length
       });
 
     } catch (error) {
@@ -1448,8 +1450,8 @@ app.get('/api/fridges/:number', (req, res) => {
     const { number } = req.params;
 
     const fridge = db.prepare(`
-      SELECT id, fridge_number, has_freezer, size, color, brand, condition, status, notes
-      FROM fridge_inventory
+      SELECT id, fridge_number, has_freezer, size, color, brand, model, condition, status, notes
+      FROM fridges
       WHERE fridge_number = ?
     `).get(number);
 
@@ -1468,10 +1470,10 @@ app.get('/api/fridges/:number', (req, res) => {
 app.patch('/api/fridges/:id', (req, res) => {
   try {
     const fridgeId = parseInt(req.params.id);
-    let { brand, size, color, condition, status, notes, performedBy } = req.body;
+    let { brand, model, size, color, condition, status, notes, performedBy } = req.body;
 
     // Get current fridge data
-    const currentFridge = db.prepare('SELECT * FROM fridge_inventory WHERE id = ?').get(fridgeId);
+    const currentFridge = db.prepare('SELECT * FROM fridges WHERE id = ?').get(fridgeId);
 
     if (!currentFridge) {
       return res.status(404).json({ error: 'Fridge not found' });
@@ -1491,6 +1493,10 @@ app.patch('/api/fridges/:id', (req, res) => {
       updates.push('brand = ?');
       params.push(brand);
     }
+    if (model !== undefined) {
+      updates.push('model = ?');
+      params.push(model);
+    }
     if (size !== undefined) {
       updates.push('size = ?');
       params.push(size);
@@ -1509,59 +1515,30 @@ app.patch('/api/fridges/:id', (req, res) => {
     }
     if (notes !== undefined) {
       updates.push('notes = ?');
-      params.push(notes);
+      // If setting to maintenance, append maintenance note
+      if (needsMaintenance && status === 'maintenance') {
+        const maintenanceNote = condition ? `Condition: ${condition}. ${notes || ''}. Needs maintenance.` : notes || 'Marked for maintenance';
+        params.push(maintenanceNote);
+      } else {
+        params.push(notes);
+      }
     }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP');
     params.push(fridgeId);
 
     const query = `
-      UPDATE fridge_inventory
+      UPDATE fridges
       SET ${updates.join(', ')}
       WHERE id = ?
     `;
 
-    db.prepare('BEGIN').run();
+    const result = db.prepare(query).run(...params);
 
-    try {
-      const result = db.prepare(query).run(...params);
-
-      // If status changed to maintenance, create a maintenance record
-      if (status === 'maintenance' && currentFridge.status !== 'maintenance') {
-        // Check if fridge exists in fridges table (foreign key requirement)
-        // Note: fridges.fridge_number is TEXT, fridge_inventory.fridge_number is INTEGER
-        const fridgeInFridgesTable = db.prepare('SELECT id FROM fridges WHERE fridge_number = ?').get(String(currentFridge.fridge_number));
-
-        if (fridgeInFridgesTable) {
-          db.prepare(`
-            INSERT INTO fridge_maintenance (
-              fridge_id,
-              maintenance_type,
-              description,
-              performed_by,
-              maintenance_date
-            )
-            VALUES (?, ?, ?, ?, date('now'))
-          `).run(
-            fridgeInFridgesTable.id,
-            'Repair Required',
-            condition ? `Condition: ${condition}. ${notes || ''}` : notes || 'Marked for maintenance',
-            performedBy || 'System'
-          );
-        }
-      }
-
-      db.prepare('COMMIT').run();
-      res.json({ success: true, message: 'Fridge updated successfully' });
-
-    } catch (error) {
-      db.prepare('ROLLBACK').run();
-      throw error;
-    }
+    res.json({ success: true, message: 'Fridge updated successfully' });
 
   } catch (error) {
     console.error('Error updating fridge:', error);
@@ -1639,10 +1616,10 @@ app.post('/api/checkouts-out', (req, res) => {
 
           // Update fridge status
           db.prepare(`
-            UPDATE fridge_inventory
-            SET status = 'checked_out', current_checkout_id = ?
+            UPDATE fridges
+            SET status = 'checked_out'
             WHERE id = ?
-          `).run(checkoutId, item.fridgeId);
+          `).run(item.fridgeId);
         }
       }
 
@@ -1694,13 +1671,13 @@ app.get('/api/checkouts-out/active', (req, res) => {
             WHEN ci.item_id IS NOT NULL THEN 'item'
             ELSE 'fridge'
           END as type,
-          COALESCE(ii.name, 'Fridge #' || fi.fridge_number) as name,
+          COALESCE(ii.name, 'Fridge #' || f.fridge_number) as name,
           ii.sku,
-          fi.fridge_number,
-          fi.brand
+          f.fridge_number,
+          f.brand
         FROM checkout_items ci
         LEFT JOIN inventory_items ii ON ci.item_id = ii.id
-        LEFT JOIN fridge_inventory fi ON ci.fridge_id = fi.id
+        LEFT JOIN fridges f ON ci.fridge_id = f.id
         WHERE ci.checkout_id = ?
       `).all(checkout.id);
 
@@ -1737,8 +1714,8 @@ app.get('/api/checkins/search', (req, res) => {
         has_freezer,
         status,
         'fridge' as type
-      FROM fridge_inventory
-      WHERE CAST(fridge_number AS TEXT) LIKE ? OR brand LIKE ?
+      FROM fridges
+      WHERE fridge_number LIKE ? OR brand LIKE ?
       LIMIT 25
     `).all(`%${q}%`, `%${q}%`);
 
@@ -1789,7 +1766,7 @@ app.post('/api/checkins', (req, res) => {
 
         } else if (item.type === 'fridge') {
           // For fridges, check if this is a return or new fridge
-          const existingFridge = db.prepare('SELECT id, fridge_number FROM fridge_inventory WHERE id = ?').get(item.fridgeId);
+          const existingFridge = db.prepare('SELECT id, fridge_number FROM fridges WHERE id = ?').get(item.fridgeId);
 
           if (existingFridge) {
             // Returning an existing fridge
@@ -1800,27 +1777,17 @@ app.post('/api/checkins', (req, res) => {
 
             // Update fridge status to available
             db.prepare(`
-              UPDATE fridge_inventory
-              SET status = 'available', current_checkout_id = NULL
+              UPDATE fridges
+              SET status = 'available'
               WHERE id = ?
             `).run(item.fridgeId);
-
-            // Mark associated checkout as returned if exists
-            const checkoutId = db.prepare('SELECT current_checkout_id FROM fridge_inventory WHERE id = ?').get(item.fridgeId)?.current_checkout_id;
-            if (checkoutId) {
-              db.prepare(`
-                UPDATE checkouts_out
-                SET status = 'returned', actual_return_date = CURRENT_TIMESTAMP
-                WHERE id = ?
-              `).run(checkoutId);
-            }
           } else {
             // New fridge being checked in - auto-generate fridge number
-            const maxNumber = db.prepare('SELECT MAX(fridge_number) as max FROM fridge_inventory').get().max || 0;
-            const newFridgeNumber = maxNumber + 1;
+            const maxNumber = db.prepare('SELECT MAX(CAST(fridge_number AS INTEGER)) as max FROM fridges').get().max || 0;
+            const newFridgeNumber = String(maxNumber + 1);
 
             const fridgeResult = db.prepare(`
-              INSERT INTO fridge_inventory (fridge_number, has_freezer, brand, status, condition)
+              INSERT INTO fridges (fridge_number, has_freezer, brand, status, condition)
               VALUES (?, ?, ?, 'available', 'Good')
             `).run(newFridgeNumber, item.hasFreezer ? 1 : 0, item.brand || 'Unknown');
 
