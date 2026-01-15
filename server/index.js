@@ -974,13 +974,19 @@ app.post('/api/inventory', (req, res) => {
 // Get fridge attribute options (from fridges table)
 app.get('/api/fridges/attributes', (req, res) => {
   try {
-    // Get distinct values directly from fridges table
-    const sizes = db.prepare('SELECT DISTINCT size FROM fridges WHERE size IS NOT NULL ORDER BY size').all().map(r => r.size);
+    // Get brands from database
     const brands = db.prepare('SELECT DISTINCT brand FROM fridges WHERE brand IS NOT NULL ORDER BY brand').all().map(r => r.brand);
-    const conditions = db.prepare('SELECT DISTINCT condition FROM fridges WHERE condition IS NOT NULL ORDER BY condition').all().map(r => r.condition);
 
-    // Standard fridge colors (color field not used in current database)
+    // Get sizes from database and clean up "Full Size with Freezer" -> "Full Size"
+    // Since freezer is a separate field in the form
+    const dbSizes = db.prepare('SELECT DISTINCT size FROM fridges WHERE size IS NOT NULL').all().map(r => r.size);
+    const sizes = [...new Set(dbSizes.map(s => s.replace(/\s+with\s+Freezer/i, '').trim()))].sort();
+
+    // Standard fridge colors (color field exists but not populated in database)
     const colors = ['White', 'Black', 'Stainless Steel', 'Silver', 'Gray', 'Red', 'Blue'];
+
+    // Standard fridge conditions (database only has Good/Needs Repair, but provide full range)
+    const conditions = ['Excellent', 'Great', 'Good', 'Fair', 'Needs Repair', 'Poor'];
 
     res.json({
       sizes,
