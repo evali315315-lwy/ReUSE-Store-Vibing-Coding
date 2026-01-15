@@ -75,6 +75,15 @@ The current backend (server/index.js) provides these endpoints:
 - **GET** `/api/fridges/checkouts/active` - Get active fridge checkouts
 - **GET** `/api/fridges/student/:email` - Get student's checked out fridges
 
+### Inventory Management
+
+- **GET** `/api/inventory` - Get all inventory items (optional ?search=)
+- **POST** `/api/inventory` - Add or update inventory item
+- **PATCH** `/api/inventory/:id` - Update inventory item quantity/description
+- **DELETE** `/api/inventory/:id` - Delete inventory item
+- **GET** `/api/inventory/:id/variants` - Get all variants for an inventory item
+- **POST** `/api/inventory/:id/variants` - Add or update variant for an item
+
 ---
 
 ## Database Structure
@@ -142,6 +151,23 @@ The database is located at `database/reuse-store.db` in the project root.
 - Checkout notes contain original fridge_checkouts data for migrated records
 - Maintenance history is stored in `fridges.notes` field
 
+**inventory** (Store inventory tracking)
+- id (PRIMARY KEY)
+- item_name (UNIQUE) - Name of the item
+- quantity - Current stock quantity
+- description - Item description
+- last_updated - Last update timestamp
+- created_at - Creation timestamp
+
+**item_variants** (Variant descriptions for inventory items)
+- id (PRIMARY KEY)
+- inventory_id (FOREIGN KEY → inventory) - Links to parent inventory item
+- variant_description - Description of the variant (e.g., "Standing Fan", "Desk Fan")
+- quantity - Quantity of this specific variant
+- created_at - Creation timestamp
+- last_updated - Last update timestamp
+- **Note**: Allows tracking different types/variations of the same inventory item
+
 ### View Database
 
 ```bash
@@ -167,6 +193,16 @@ FROM checkouts c
 JOIN items i ON i.checkout_id = c.id
 WHERE i.item_name LIKE 'Fridge #%'
   AND i.verification_status = 'pending';
+
+# Get inventory items with low stock
+SELECT * FROM inventory WHERE quantity < 5 ORDER BY quantity ASC;
+
+# Get inventory item with all its variants
+SELECT i.item_name, i.quantity as total_quantity,
+       v.variant_description, v.quantity as variant_quantity
+FROM inventory i
+LEFT JOIN item_variants v ON v.inventory_id = i.id
+WHERE i.id = 1;
 
 # Exit
 .exit
@@ -217,6 +253,33 @@ curl http://localhost:3001/api/fridges/stats
 curl http://localhost:3001/api/fridges/1
 ```
 
+### Inventory Operations
+```bash
+# Get all inventory items
+curl http://localhost:3001/api/inventory
+
+# Search inventory
+curl "http://localhost:3001/api/inventory?search=fan"
+
+# Add new inventory item
+curl -X POST http://localhost:3001/api/inventory \
+  -H "Content-Type: application/json" \
+  -d '{"itemName": "Fan", "quantity": 5, "description": "Electric fans"}'
+
+# Update inventory item
+curl -X PATCH http://localhost:3001/api/inventory/1 \
+  -H "Content-Type: application/json" \
+  -d '{"quantity": 10, "description": "Updated description"}'
+
+# Get variants for an item
+curl http://localhost:3001/api/inventory/1/variants
+
+# Add variant to an item
+curl -X POST http://localhost:3001/api/inventory/1/variants \
+  -H "Content-Type: application/json" \
+  -d '{"variant_description": "Standing Fan", "quantity": 3}'
+```
+
 ---
 
 ## Troubleshooting
@@ -240,7 +303,7 @@ Check current tables:
 sqlite3 database/reuse-store.db ".tables"
 ```
 
-You should see: `checkouts`, `fridge_companies`, `fridges`, `items`
+You should see: `checkouts`, `fridge_companies`, `fridges`, `inventory`, `item_variants`, `items`, `settings`
 
 For migration details, see `database/MIGRATION_SUMMARY.md`
 

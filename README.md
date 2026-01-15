@@ -85,11 +85,13 @@ The database is automatically created when you first run the server. No addition
 
 ### Database Schema
 
-The application uses 4 main tables:
+The application uses 6 main tables:
 - **checkouts** - Student checkout records
 - **items** - Individual donated items (linked to checkouts)
 - **fridges** - Fridge inventory and status tracking
 - **fridge_companies** - Legacy fridge company reference data (2019-2023 data only, 169 items)
+- **inventory** - Current stock levels for items available in the store
+- **item_variants** - Variant descriptions for inventory items (e.g., "Standing Fan", "Desk Fan")
 
 For detailed schema information, see [backend/README.md](backend/README.md)
 
