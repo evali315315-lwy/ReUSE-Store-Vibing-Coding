@@ -11,6 +11,7 @@ function AboutContent() {
   const { version } = useVersion();
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -187,14 +188,31 @@ function AboutContent() {
   };
 
   const isAdmin = version === 'admin';
+  const canEdit = isAdmin && editMode;
 
   return (
     <div className="space-y-12">
-      {/* Admin indicator */}
+      {/* Admin Edit Mode Toggle */}
       {isAdmin && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => setEditMode(!editMode)}
+            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+              editMode
+                ? 'bg-eco-primary-600 text-white hover:bg-eco-primary-700'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            {editMode ? '✓ Edit Mode ON' : 'Edit Page'}
+          </button>
+        </div>
+      )}
+
+      {/* Edit Mode indicator */}
+      {canEdit && (
         <div className="bg-eco-primary-50 border border-eco-primary-200 rounded-lg p-3 text-center">
           <p className="text-sm text-eco-primary-700">
-            <strong>Admin Mode:</strong> Hover over any text to edit inline
+            <strong>Edit Mode Active:</strong> Hover over any text to edit inline
           </p>
         </div>
       )}
@@ -210,7 +228,7 @@ function AboutContent() {
           <InlineEditableField
             value={heroTitle}
             onSave={(newValue) => handleSaveSimple('hero_title', newValue, 'Title updated')}
-            isAdmin={isAdmin}
+            isAdmin={canEdit}
             placeholder="Main title"
           />
         </h1>
@@ -218,7 +236,7 @@ function AboutContent() {
           <InlineEditableField
             value={heroSubtitle}
             onSave={(newValue) => handleSaveSimple('hero_subtitle', newValue, 'Subtitle updated')}
-            isAdmin={isAdmin}
+            isAdmin={canEdit}
             placeholder="Subtitle"
             multiline={true}
           />
@@ -227,7 +245,7 @@ function AboutContent() {
           <InlineEditableField
             value={blackSquirrelText}
             onSave={(newValue) => handleSaveSimple('black_squirrel_text', newValue, 'Text updated')}
-            isAdmin={isAdmin}
+            isAdmin={canEdit}
             placeholder="Tagline"
           />
         </p>
@@ -244,7 +262,7 @@ function AboutContent() {
               <InlineEditableField
                 value={whatIsTitle}
                 onSave={(newValue) => handleSaveSimple('what_is_title', newValue, 'Title updated')}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Section title"
               />
             </h2>
@@ -252,7 +270,7 @@ function AboutContent() {
               <InlineEditableField
                 value={whatIsText}
                 onSave={(newValue) => handleSaveSimple('what_is_text', newValue, 'Description updated')}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Section description"
                 multiline={true}
               />
@@ -267,7 +285,7 @@ function AboutContent() {
           <InlineEditableField
             value={howItWorksHeading}
             onSave={(newValue) => handleSaveSimple('how_it_works_heading', newValue, 'Heading updated')}
-            isAdmin={isAdmin}
+            isAdmin={canEdit}
             placeholder="Section heading"
           />
         </h2>
@@ -282,7 +300,7 @@ function AboutContent() {
                 <InlineEditableField
                   value={donatingTitle}
                   onSave={(newValue) => handleSaveSimple('donating_title', newValue, 'Title updated')}
-                  isAdmin={isAdmin}
+                  isAdmin={canEdit}
                   placeholder="Donating title"
                 />
               </h3>
@@ -290,7 +308,7 @@ function AboutContent() {
             <InlineEditableList
               items={donatingItems}
               onSave={(newItems) => handleSaveList('donating_items', newItems, 'Donating items updated')}
-              isAdmin={isAdmin}
+              isAdmin={canEdit}
               bulletColor="text-eco-primary-500"
             />
           </div>
@@ -305,7 +323,7 @@ function AboutContent() {
                 <InlineEditableField
                   value={shoppingTitle}
                   onSave={(newValue) => handleSaveSimple('shopping_title', newValue, 'Title updated')}
-                  isAdmin={isAdmin}
+                  isAdmin={canEdit}
                   placeholder="Shopping title"
                 />
               </h3>
@@ -313,7 +331,7 @@ function AboutContent() {
             <InlineEditableList
               items={shoppingItems}
               onSave={(newItems) => handleSaveList('shopping_items', newItems, 'Shopping items updated')}
-              isAdmin={isAdmin}
+              isAdmin={canEdit}
               bulletColor="text-eco-primary-500"
             />
           </div>
@@ -326,7 +344,7 @@ function AboutContent() {
           <InlineEditableField
             value={acceptedItemsHeading}
             onSave={(newValue) => handleSaveSimple('accepted_items_heading', newValue, 'Heading updated')}
-            isAdmin={isAdmin}
+            isAdmin={canEdit}
             placeholder="Section heading"
           />
         </h2>
@@ -338,14 +356,14 @@ function AboutContent() {
               <InlineEditableField
                 value={weAcceptTitle}
                 onSave={(newValue) => handleSaveSimple('we_accept_title', newValue, 'Title updated')}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Title"
               />
             </h3>
             <InlineEditableList
               items={acceptedItems}
               onSave={(newItems) => handleSaveList('accepted_items', newItems, 'Accepted items updated')}
-              isAdmin={isAdmin}
+              isAdmin={canEdit}
               bulletColor="text-eco-primary-500"
             />
           </div>
@@ -357,14 +375,14 @@ function AboutContent() {
               <InlineEditableField
                 value={weDontAcceptTitle}
                 onSave={(newValue) => handleSaveSimple('we_dont_accept_title', newValue, 'Title updated')}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Title"
               />
             </h3>
             <InlineEditableList
               items={notAcceptedItems}
               onSave={(newItems) => handleSaveList('not_accepted_items', newItems, 'Non-accepted items updated')}
-              isAdmin={isAdmin}
+              isAdmin={canEdit}
               bulletColor="text-red-500"
             />
           </div>
@@ -377,7 +395,7 @@ function AboutContent() {
           <InlineEditableField
             value={visitUsHeading}
             onSave={(newValue) => handleSaveSimple('visit_us_heading', newValue, 'Heading updated')}
-            isAdmin={isAdmin}
+            isAdmin={canEdit}
             placeholder="Section heading"
           />
         </h2>
@@ -392,7 +410,7 @@ function AboutContent() {
                 <InlineEditableField
                   value={locationHeading}
                   onSave={(newValue) => handleSaveSimple('location_heading', newValue, 'Heading updated')}
-                  isAdmin={isAdmin}
+                  isAdmin={canEdit}
                   placeholder="Subsection heading"
                 />
               </h3>
@@ -402,35 +420,35 @@ function AboutContent() {
               <InlineEditableField
                 value={location.building}
                 onSave={(newValue) => handleSaveLocation('building', newValue)}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Building name"
               />
               <br />
               <InlineEditableField
                 value={location.street}
                 onSave={(newValue) => handleSaveLocation('street', newValue)}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Street address"
               />
               <br />
               <InlineEditableField
                 value={location.city}
                 onSave={(newValue) => handleSaveLocation('city', newValue)}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="City"
               />
               {', '}
               <InlineEditableField
                 value={location.state}
                 onSave={(newValue) => handleSaveLocation('state', newValue)}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="State"
               />
               {' '}
               <InlineEditableField
                 value={location.zip}
                 onSave={(newValue) => handleSaveLocation('zip', newValue)}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="ZIP"
               />
             </p>
@@ -446,7 +464,7 @@ function AboutContent() {
                 <InlineEditableField
                   value={hoursHeading}
                   onSave={(newValue) => handleSaveSimple('hours_heading', newValue, 'Heading updated')}
-                  isAdmin={isAdmin}
+                  isAdmin={canEdit}
                   placeholder="Subsection heading"
                 />
               </h3>
@@ -458,7 +476,7 @@ function AboutContent() {
                   <InlineEditableField
                     value={time}
                     onSave={(newValue) => handleSaveHours(day, newValue)}
-                    isAdmin={isAdmin}
+                    isAdmin={canEdit}
                     placeholder="Enter hours"
                   />
                 </p>
@@ -467,7 +485,7 @@ function AboutContent() {
                 <InlineEditableField
                   value={hoursNote}
                   onSave={(newValue) => handleSaveSimple('hours_note', newValue, 'Note updated')}
-                  isAdmin={isAdmin}
+                  isAdmin={canEdit}
                   placeholder="Hours note"
                 />
               </p>
@@ -487,7 +505,7 @@ function AboutContent() {
               <InlineEditableField
                 value={getInTouchHeading}
                 onSave={(newValue) => handleSaveSimple('get_in_touch_heading', newValue, 'Heading updated')}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Section heading"
               />
             </h2>
@@ -495,7 +513,7 @@ function AboutContent() {
               <InlineEditableField
                 value={getInTouchDescription}
                 onSave={(newValue) => handleSaveSimple('get_in_touch_description', newValue, 'Description updated')}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Contact description"
                 multiline={true}
               />
@@ -503,11 +521,11 @@ function AboutContent() {
             <div className="space-y-2">
               <p className="text-gray-700">
                 <strong>Email:</strong>{' '}
-                {isAdmin ? (
+                {canEdit ? (
                   <InlineEditableField
                     value={contactEmail}
                     onSave={handleSaveEmail}
-                    isAdmin={isAdmin}
+                    isAdmin={canEdit}
                     placeholder="email@haverford.edu"
                     className="text-eco-primary-600"
                   />
@@ -522,7 +540,7 @@ function AboutContent() {
                 <InlineEditableField
                   value={contactPhone}
                   onSave={handleSavePhone}
-                  isAdmin={isAdmin}
+                  isAdmin={canEdit}
                   placeholder="(XXX) XXX-XXXX"
                 />
               </p>
@@ -537,7 +555,7 @@ function AboutContent() {
           <InlineEditableField
             value={environmentalImpactHeading}
             onSave={(newValue) => handleSaveSimple('environmental_impact_heading', newValue, 'Heading updated')}
-            isAdmin={isAdmin}
+            isAdmin={canEdit}
             placeholder="Section heading"
           />
         </h2>
@@ -545,7 +563,7 @@ function AboutContent() {
           <InlineEditableField
             value={environmentalImpactText}
             onSave={(newValue) => handleSaveSimple('environmental_impact_text', newValue, 'Text updated')}
-            isAdmin={isAdmin}
+            isAdmin={canEdit}
             placeholder="Impact description"
             multiline={true}
           />
@@ -561,7 +579,7 @@ function AboutContent() {
                   newLabels[0] = newValue;
                   handleSaveList('impact_labels', newLabels, 'Label updated');
                 }}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Impact label"
               />
             </p>
@@ -576,7 +594,7 @@ function AboutContent() {
                   newLabels[1] = newValue;
                   handleSaveList('impact_labels', newLabels, 'Label updated');
                 }}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Impact label"
               />
             </p>
@@ -591,7 +609,7 @@ function AboutContent() {
                   newLabels[2] = newValue;
                   handleSaveList('impact_labels', newLabels, 'Label updated');
                 }}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
                 placeholder="Impact label"
               />
             </p>
