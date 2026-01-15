@@ -1,11 +1,42 @@
-import { useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Check, Flag } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Check, Flag, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
+import axios from 'axios';
 
-const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+const SwipeCard = ({ data, onSwipeLeft, onSwipeRight, onDataUpdate }) => {
   const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const cardRef = useRef(null);
+
+  // Editable fields
+  const [editedData, setEditedData] = useState({
+    donorName: data.donorName || '',
+    donorEmail: data.donorEmail || '',
+    housingAssignment: data.housingAssignment || '',
+    graduationYear: data.graduationYear || ''
+  });
+  const [editedItems, setEditedItems] = useState(data.items || []);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingField, setEditingField] = useState(null); // Track which field is being edited (e.g., 'donorName', 'item-0-name', 'item-0-quantity')
+  const [itemSuggestions, setItemSuggestions] = useState([]); // Autocomplete suggestions for item names
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Reset edited data when data prop changes
+  useEffect(() => {
+    setEditedData({
+      donorName: data.donorName || '',
+      donorEmail: data.donorEmail || '',
+      housingAssignment: data.housingAssignment || '',
+      graduationYear: data.graduationYear || ''
+    });
+    setEditedItems(data.items || []);
+    setHasChanges(false);
+    setEditingField(null);
+  }, [data]);
 
   const handleTouchStart = (e) => {
     setStartX(e.touches[0].clientX);
@@ -70,6 +101,105 @@ const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
 
   const getOpacity = () => {
     return 1 - Math.abs(currentX) / 500;
+  };
+
+  const handleFieldClick = (field, e) => {
+    e.stopPropagation();
+    setEditingField(field);
+  };
+
+  const handleFieldChange = (field, value) => {
+    setEditedData(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
+  const handleItemFieldChange = async (itemIndex, field, value) => {
+    setEditedItems(prev => {
+      const newItems = [...prev];
+      newItems[itemIndex] = { ...newItems[itemIndex], [field]: value };
+      return newItems;
+    });
+    setHasChanges(true);
+
+    // If editing item name and value has 2+ characters, search for suggestions
+    if (field === 'name' && value.length >= 2) {
+      try {
+        const response = await axios.get(`${API_URL}/items/search`, {
+          params: { query: value, limit: 10 }
+        });
+
+        // Extract unique item names from results
+        const uniqueNames = [...new Set(response.data.map(item => item.item_name))];
+        setItemSuggestions(uniqueNames);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('Error fetching item suggestions:', error);
+        setItemSuggestions([]);
+      }
+    } else if (field === 'name' && value.length < 2) {
+      setItemSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (itemIndex, suggestedName) => {
+    setEditedItems(prev => {
+      const newItems = [...prev];
+      newItems[itemIndex] = { ...newItems[itemIndex], name: suggestedName };
+      return newItems;
+    });
+    setHasChanges(true);
+    setShowSuggestions(false);
+    setItemSuggestions([]);
+    setEditingField(null);
+  };
+
+  const handleFieldBlur = () => {
+    // Don't close editing if user is typing or selecting suggestion
+    setTimeout(() => {
+      setEditingField(null);
+      setShowSuggestions(false);
+    }, 200);
+  };
+
+  const handleSaveChanges = async (e) => {
+    e.stopPropagation();
+    setIsSaving(true);
+
+    try {
+      // Update checkout information
+      await axios.patch(`${API_URL}/checkouts/${data.checkoutId}`, {
+        owner_name: editedData.donorName,
+        email: editedData.donorEmail,
+        housing_assignment: editedData.housingAssignment,
+        graduation_year: editedData.graduationYear
+      });
+
+      // Update items
+      await Promise.all(
+        editedItems.map(item =>
+          axios.patch(`${API_URL}/items/${item.id}`, {
+            item_name: item.name,
+            description: item.description,
+            item_quantity: item.quantity
+          })
+        )
+      );
+
+      toast.success('Changes saved successfully');
+      setHasChanges(false);
+      setEditingField(null);
+
+      // Notify parent component to refresh data
+      if (onDataUpdate) {
+        onDataUpdate();
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast.error('Failed to save changes');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -148,6 +278,18 @@ const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
                 +{data.items.length - 1} more {data.items.length === 2 ? 'item' : 'items'} in this checkout
               </p>
             )}
+
+            {/* Save Changes Button */}
+            {hasChanges && (
+              <button
+                onClick={handleSaveChanges}
+                disabled={isSaving}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-eco-primary-600 text-white rounded-lg hover:bg-eco-primary-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save size={18} />
+                <span className="font-medium">{isSaving ? 'Saving...' : 'Save Changes'}</span>
+              </button>
+            )}
           </div>
 
           {/* Information Section */}
@@ -164,12 +306,96 @@ const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
 
               <div>
                 <label className="text-sm font-medium text-gray-600">Donor Name</label>
-                <p className="text-gray-900 mt-1">{data.donorName}</p>
+                {editingField === 'donorName' ? (
+                  <input
+                    type="text"
+                    value={editedData.donorName}
+                    onChange={(e) => handleFieldChange('donorName', e.target.value)}
+                    onBlur={handleFieldBlur}
+                    autoFocus
+                    className="w-full mt-1 px-3 py-2 border border-eco-primary-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary-500 focus:border-transparent"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <p
+                    onClick={(e) => handleFieldClick('donorName', e)}
+                    className="text-gray-900 mt-1 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    {editedData.donorName}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-600">Donor Email</label>
-                <p className="text-gray-900 mt-1">{data.donorEmail}</p>
+                {editingField === 'donorEmail' ? (
+                  <input
+                    type="email"
+                    value={editedData.donorEmail}
+                    onChange={(e) => handleFieldChange('donorEmail', e.target.value)}
+                    onBlur={handleFieldBlur}
+                    autoFocus
+                    className="w-full mt-1 px-3 py-2 border border-eco-primary-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary-500 focus:border-transparent"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <p
+                    onClick={(e) => handleFieldClick('donorEmail', e)}
+                    className="text-gray-900 mt-1 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    {editedData.donorEmail}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-600">Housing Assignment</label>
+                {editingField === 'housingAssignment' ? (
+                  <input
+                    type="text"
+                    value={editedData.housingAssignment}
+                    onChange={(e) => handleFieldChange('housingAssignment', e.target.value)}
+                    onBlur={handleFieldBlur}
+                    autoFocus
+                    placeholder="Optional"
+                    className="w-full mt-1 px-3 py-2 border border-eco-primary-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary-500 focus:border-transparent"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <p
+                    onClick={(e) => handleFieldClick('housingAssignment', e)}
+                    className="text-gray-900 mt-1 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    {editedData.housingAssignment || '-'}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-600">Graduation Year</label>
+                {editingField === 'graduationYear' ? (
+                  <input
+                    type="text"
+                    value={editedData.graduationYear}
+                    onChange={(e) => handleFieldChange('graduationYear', e.target.value)}
+                    onBlur={handleFieldBlur}
+                    autoFocus
+                    placeholder="Optional"
+                    className="w-full mt-1 px-3 py-2 border border-eco-primary-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary-500 focus:border-transparent"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <p
+                    onClick={(e) => handleFieldClick('graduationYear', e)}
+                    className="text-gray-900 mt-1 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    {editedData.graduationYear || '-'}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -186,20 +412,104 @@ const SwipeCard = ({ data, onSwipeLeft, onSwipeRight }) => {
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-2 block">Items in this checkout:</label>
                 <div className="space-y-2 max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-3">
-                  {data.items && data.items.length > 0 ? (
-                    data.items.map((item, index) => (
+                  {editedItems && editedItems.length > 0 ? (
+                    editedItems.map((item, index) => (
                       <div key={item.id || index} className="bg-white p-3 rounded-md border border-gray-200">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="font-semibold text-gray-900">{item.name}</p>
-                            {item.description && (
-                              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="flex-1 space-y-2">
+                            {/* Item Name */}
+                            <div className="relative">
+                              {editingField === `item-${index}-name` ? (
+                                <>
+                                  <input
+                                    type="text"
+                                    value={item.name}
+                                    onChange={(e) => handleItemFieldChange(index, 'name', e.target.value)}
+                                    onBlur={handleFieldBlur}
+                                    autoFocus
+                                    className="w-full px-2 py-1 text-sm border border-eco-primary-500 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                  />
+                                  {/* Autocomplete Dropdown */}
+                                  {showSuggestions && itemSuggestions.length > 0 && (
+                                    <div
+                                      className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                                      onClick={(e) => e.stopPropagation()}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                    >
+                                      {itemSuggestions.map((suggestion, suggestionIndex) => (
+                                        <div
+                                          key={suggestionIndex}
+                                          onClick={() => handleSelectSuggestion(index, suggestion)}
+                                          className="px-3 py-2 text-sm cursor-pointer hover:bg-eco-primary-100 border-b border-gray-100 last:border-b-0"
+                                        >
+                                          {suggestion}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <p
+                                  onClick={(e) => handleFieldClick(`item-${index}-name`, e)}
+                                  className="font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                                >
+                                  {item.name}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Item Description */}
+                            <div>
+                              {editingField === `item-${index}-description` ? (
+                                <textarea
+                                  value={item.description || ''}
+                                  onChange={(e) => handleItemFieldChange(index, 'description', e.target.value)}
+                                  onBlur={handleFieldBlur}
+                                  autoFocus
+                                  placeholder="Optional description"
+                                  rows={2}
+                                  className="w-full px-2 py-1 text-sm border border-eco-primary-500 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                />
+                              ) : (
+                                <p
+                                  onClick={(e) => handleFieldClick(`item-${index}-description`, e)}
+                                  className="text-sm text-gray-600 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                                >
+                                  {item.description || '(Click to add description)'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Item Quantity */}
+                          <div className="flex-shrink-0">
+                            {editingField === `item-${index}-quantity` ? (
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => handleItemFieldChange(index, 'quantity', parseInt(e.target.value) || 1)}
+                                onBlur={handleFieldBlur}
+                                autoFocus
+                                className="w-16 px-2 py-1 text-sm text-center border border-eco-primary-500 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                              />
+                            ) : (
+                              <span
+                                onClick={(e) => handleFieldClick(`item-${index}-quantity`, e)}
+                                className="inline-block text-sm font-medium text-eco-primary-600 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                              >
+                                Qty: {item.quantity}
+                              </span>
                             )}
                           </div>
-                          <span className="text-sm font-medium text-eco-primary-600 ml-2">
-                            Qty: {item.quantity}
-                          </span>
                         </div>
+
                         {item.imageUrl && (
                           <div className="mt-2">
                             <img

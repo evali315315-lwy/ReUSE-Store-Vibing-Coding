@@ -14,6 +14,8 @@ const PhotoVerification = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({ pending: 0, approved: 0, flagged: 0 });
+  const [selectedCheckouts, setSelectedCheckouts] = useState([]); // For multi-select
+  const [isProcessing, setIsProcessing] = useState(false); // For bulk operations
 
   // Fetch statistics
   const fetchStats = async () => {
@@ -120,6 +122,7 @@ const PhotoVerification = () => {
   const handleStatusClick = (status) => {
     setSelectedStatus(status);
     setView('table');
+    setSelectedCheckouts([]); // Clear selection when switching tabs
     fetchTableItems(status);
   };
 
@@ -128,7 +131,104 @@ const PhotoVerification = () => {
     setView('swipe');
     setSelectedStatus(null);
     setCurrentIndex(0);
+    setSelectedCheckouts([]); // Clear selection
     fetchSwipeItems();
+  };
+
+  // Multi-select handlers
+  const handleSelectCheckout = (checkoutId) => {
+    setSelectedCheckouts(prev =>
+      prev.includes(checkoutId)
+        ? prev.filter(id => id !== checkoutId)
+        : [...prev, checkoutId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCheckouts.length === items.length) {
+      setSelectedCheckouts([]);
+    } else {
+      setSelectedCheckouts(items.map(c => c.checkoutId));
+    }
+  };
+
+  // Bulk action handlers
+  const handleBulkApprove = async () => {
+    if (selectedCheckouts.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      await Promise.all(
+        selectedCheckouts.map(checkoutId =>
+          axios.patch(`${API_URL}/verification/checkouts/${checkoutId}`, {
+            status: 'approved',
+            verifiedAt: new Date().toISOString()
+          })
+        )
+      );
+
+      toast.success(`${selectedCheckouts.length} checkout(s) approved!`);
+      setSelectedCheckouts([]);
+      fetchTableItems(selectedStatus);
+      fetchStats();
+    } catch (error) {
+      console.error('Error bulk approving:', error);
+      toast.error('Failed to approve some checkouts');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBulkFlag = async () => {
+    if (selectedCheckouts.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      await Promise.all(
+        selectedCheckouts.map(checkoutId =>
+          axios.patch(`${API_URL}/verification/checkouts/${checkoutId}`, {
+            status: 'flagged',
+            verifiedAt: new Date().toISOString()
+          })
+        )
+      );
+
+      toast.error(`${selectedCheckouts.length} checkout(s) flagged for review`, { icon: '🚩' });
+      setSelectedCheckouts([]);
+      fetchTableItems(selectedStatus);
+      fetchStats();
+    } catch (error) {
+      console.error('Error bulk flagging:', error);
+      toast.error('Failed to flag some checkouts');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBulkReconfirm = async () => {
+    if (selectedCheckouts.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      await Promise.all(
+        selectedCheckouts.map(checkoutId =>
+          axios.patch(`${API_URL}/verification/checkouts/${checkoutId}`, {
+            status: 'approved',
+            verifiedAt: new Date().toISOString()
+          })
+        )
+      );
+
+      toast.success(`${selectedCheckouts.length} checkout(s) reconfirmed!`);
+      setSelectedCheckouts([]);
+      fetchTableItems(selectedStatus);
+      fetchStats();
+    } catch (error) {
+      console.error('Error bulk reconfirming:', error);
+      toast.error('Failed to reconfirm some checkouts');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Handle swipe actions (updates all items in the checkout session)
@@ -301,6 +401,7 @@ const PhotoVerification = () => {
                     data={currentItem}
                     onSwipeLeft={handleSwipeLeft}
                     onSwipeRight={handleSwipeRight}
+                    onDataUpdate={fetchSwipeItems}
                   />
                 </div>
               ) : (
@@ -384,28 +485,91 @@ const PhotoVerification = () => {
             </p>
           </div>
         ) : (
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Donor Info
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Items Donated
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((checkout) => (
-                    <tr key={checkout.id} className="hover:bg-gray-50">
+          <div className="space-y-4">
+            {/* Bulk action buttons */}
+            {selectedCheckouts.length > 0 && (
+              <div className="card">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-gray-700">
+                      {selectedCheckouts.length} selected
+                    </span>
+                    {selectedStatus === 'pending' && (
+                      <>
+                        <button
+                          onClick={handleBulkApprove}
+                          disabled={isProcessing}
+                          className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+                        >
+                          {isProcessing ? 'Processing...' : 'Approve Selected'}
+                        </button>
+                        <button
+                          onClick={handleBulkFlag}
+                          disabled={isProcessing}
+                          className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+                        >
+                          {isProcessing ? 'Processing...' : 'Flag Selected'}
+                        </button>
+                      </>
+                    )}
+                    {selectedStatus === 'flagged' && (
+                      <button
+                        onClick={handleBulkReconfirm}
+                        disabled={isProcessing}
+                        className="px-4 py-2 bg-eco-primary-600 text-white hover:bg-eco-primary-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+                      >
+                        {isProcessing ? 'Processing...' : 'Reconfirm Selected'}
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setSelectedCheckouts([])}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={selectedCheckouts.length === items.length && items.length > 0}
+                          onChange={handleSelectAll}
+                          className="w-4 h-4 text-eco-primary-600 rounded focus:ring-eco-primary-500"
+                        />
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Donor Info
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Items Donated
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {items.map((checkout) => (
+                      <tr key={checkout.id} className={`hover:bg-gray-50 ${selectedCheckouts.includes(checkout.checkoutId) ? 'bg-eco-primary-50' : ''}`}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedCheckouts.includes(checkout.checkoutId)}
+                            onChange={() => handleSelectCheckout(checkout.checkoutId)}
+                            className="w-4 h-4 text-eco-primary-600 rounded focus:ring-eco-primary-500"
+                          />
+                        </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
                           {checkout.owner_name}
@@ -498,6 +662,7 @@ const PhotoVerification = () => {
                 </tbody>
               </table>
             </div>
+          </div>
           </div>
         )}
 
