@@ -14,7 +14,7 @@ const checkoutSchema = z.object({
   studentEmail: z.string().email('Valid email required').endsWith('@haverford.edu', 'Must be Haverford email'),
   studentId: z.string().optional(),
   housingAssignment: z.string().min(1, 'Housing assignment is required'),
-  phoneNumber: z.string().optional(),
+  phoneNumber: z.string().regex(/^[\d\s\-\(\)]*$/, 'Phone number can only contain numbers, spaces, hyphens, and parentheses').optional(),
   expectedReturnDate: z.string().min(1, 'Expected return date is required'),
   conditionAtCheckout: z.enum(['Good', 'Fair', 'Needs Repair']),
   notesCheckout: z.string().optional(),
@@ -141,7 +141,15 @@ const FridgeCheckoutForm = ({ fridges, onSuccess, onCancel }) => {
               {...register('phoneNumber')}
               className="input"
               placeholder="(555) 123-4567"
+              pattern="[\d\s\-\(\)]*"
+              onInput={(e) => {
+                // Remove any alphabetic characters as user types
+                e.target.value = e.target.value.replace(/[a-zA-Z]/g, '');
+              }}
             />
+            {errors.phoneNumber && (
+              <p className="mt-1 text-sm text-red-600">{errors.phoneNumber.message}</p>
+            )}
           </div>
         </div>
 
