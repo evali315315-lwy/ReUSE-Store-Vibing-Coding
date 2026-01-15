@@ -1,18 +1,15 @@
 import { Recycle, ShoppingBag, Clock, MapPin, Mail, Heart } from 'lucide-react';
-import squirrelLogo from '../../assets/squirrel.svg';
+import reuseLogo from '../../assets/(RE)use Store Logo for Email (2) (1).png';
 
 function AboutContent() {
   return (
     <div className="space-y-12">
-      {/* Hero Section with Squirrel */}
+      {/* Hero Section with ReUSE Logo */}
       <section className="text-center py-12 relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-48 bg-gradient-to-b from-eco-primary-100 via-eco-teal-light/20 to-transparent rounded-full blur-3xl -z-10"></div>
 
-        <div className="flex justify-center items-center gap-6 mb-6">
-          <img src={squirrelLogo} alt="Black Squirrel Mascot" className="w-24 h-24 animate-bounce" style={{ animationDuration: '3s' }} />
-          <div className="inline-block p-4 bg-gradient-to-br from-eco-primary-200 to-eco-teal-light rounded-full shadow-lg">
-            <Recycle className="w-16 h-16 text-eco-primary-700" />
-          </div>
+        <div className="flex justify-center items-center mb-6">
+          <img src={reuseLogo} alt="ReUSE Store Logo" className="h-32 w-auto object-contain" />
         </div>
 
         <h1 className="text-5xl font-bold bg-gradient-to-r from-eco-primary-700 via-eco-teal-dark to-eco-primary-800 bg-clip-text text-transparent mb-4 font-display">

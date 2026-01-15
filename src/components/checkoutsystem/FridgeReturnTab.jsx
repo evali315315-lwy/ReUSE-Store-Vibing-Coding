@@ -250,6 +250,25 @@ function FridgeReturnTab() {
         </div>
       )}
 
+      {/* Return Notes */}
+      {selectedStudent && selectedFridges.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Return Notes (Optional)
+          </label>
+          <p className="text-xs text-gray-600 mb-2">
+            Optionally specify the condition of the fridge interior. Was it cleaned out? Any issues?
+          </p>
+          <textarea
+            value={returnNotes}
+            onChange={(e) => setReturnNotes(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., Fridge was cleaned out and in good condition, or Fridge had food residue and needs cleaning..."
+          />
+        </div>
+      )}
+
       {/* Submit Button */}
       <button
         type="submit"
