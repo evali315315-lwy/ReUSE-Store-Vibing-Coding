@@ -767,6 +767,8 @@ app.get('/api/students/search', (req, res) => {
     const { q = '', withFridgesOnly = 'false' } = req.query;
 
     let query;
+    const searchPattern = `${q}%`; // Prefix search only
+
     if (withFridgesOnly === 'true') {
       // Only return students with active fridge checkouts
       // Fridge checkouts are identified by items with name like "Fridge #%"
@@ -802,7 +804,7 @@ app.get('/api/students/search', (req, res) => {
       `;
     }
 
-    const students = db.prepare(query).all(`%${q}%`, `%${q}%`);
+    const students = db.prepare(query).all(searchPattern, searchPattern);
     res.json(students);
   } catch (error) {
     console.error('Error searching students:', error);
@@ -879,6 +881,7 @@ app.get('/api/inventory/search', (req, res) => {
 
     // Query items table and aggregate by item_name
     // Only include approved donated items (these are available for checkout to students)
+    // Exclude fridge records: items with fridge_company_id OR items named "Fridge" or "Fridge #X"
     const query = `
       SELECT
         item_name as name,
@@ -888,6 +891,8 @@ app.get('/api/inventory/search', (req, res) => {
       FROM items
       WHERE item_name LIKE ?
         AND verification_status = 'approved'
+        AND fridge_company_id IS NULL
+        AND item_name NOT LIKE 'Fridge%'
       GROUP BY item_name
       HAVING COUNT(*) > 0
       ORDER BY item_name
@@ -968,15 +973,29 @@ app.post('/api/inventory', (req, res) => {
 });
 
 // Fridge Management Endpoints
-// Get fridge attribute options (from dynamic tables)
+// Get fridge attribute options (from fridges table)
 app.get('/api/fridges/attributes', (req, res) => {
   try {
-    const sizes = db.prepare('SELECT name FROM fridge_sizes ORDER BY id').all().map(r => r.name);
-    const colors = db.prepare('SELECT name FROM fridge_colors ORDER BY id').all().map(r => r.name);
-    const brands = db.prepare('SELECT name FROM fridge_brands ORDER BY name').all().map(r => r.name);
-    const conditions = db.prepare('SELECT name FROM fridge_conditions ORDER BY id').all().map(r => r.name);
+    // Get brands from database
+    const brands = db.prepare('SELECT DISTINCT brand FROM fridges WHERE brand IS NOT NULL ORDER BY brand').all().map(r => r.brand);
 
-    res.json({ sizes, colors, brands, conditions });
+    // Get sizes from database and clean up "Full Size with Freezer" -> "Full Size"
+    // Since freezer is a separate field in the form
+    const dbSizes = db.prepare('SELECT DISTINCT size FROM fridges WHERE size IS NOT NULL').all().map(r => r.size);
+    const sizes = [...new Set(dbSizes.map(s => s.replace(/\s+with\s+Freezer/i, '').trim()))].sort();
+
+    // Standard fridge colors (color field exists but not populated in database)
+    const colors = ['White', 'Black', 'Stainless Steel', 'Silver', 'Gray', 'Red', 'Blue'];
+
+    // Standard fridge conditions (database only has Good/Needs Repair, but provide full range)
+    const conditions = ['Excellent', 'Great', 'Good', 'Fair', 'Needs Repair', 'Poor'];
+
+    res.json({
+      sizes,
+      colors,
+      brands,
+      conditions
+    });
   } catch (error) {
     console.error('Error fetching fridge attributes:', error);
     res.status(500).json({ error: 'Failed to fetch fridge attributes' });
@@ -1720,6 +1739,7 @@ app.get('/api/checkins/search', (req, res) => {
 
     // Search items table and aggregate by item_name
     // Include ALL items (approved, pending, flagged) for check-in
+    // Exclude fridge records: items with fridge_company_id OR items named "Fridge" or "Fridge #X"
     const items = db.prepare(`
       SELECT
         item_name as name,
@@ -1729,6 +1749,8 @@ app.get('/api/checkins/search', (req, res) => {
         'item' as type
       FROM items
       WHERE item_name LIKE ?
+        AND fridge_company_id IS NULL
+        AND item_name NOT LIKE 'Fridge%'
       GROUP BY item_name
       HAVING COUNT(*) > 0
       ORDER BY item_name
