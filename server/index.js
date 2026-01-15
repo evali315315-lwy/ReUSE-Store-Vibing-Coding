@@ -3,11 +3,6 @@ import cors from 'cors';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
-import googleDriveService from './services/googleDrive.js';
-
-// Load environment variables from .env.local
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,13 +14,9 @@ const PORT = 3001;
 const DB_PATH = path.join(__dirname, '../database/reuse-store.db');
 const db = new Database(DB_PATH, { readonly: false });
 
-// Initialize Google Drive service
-googleDriveService.initialize();
-
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Increase limit for base64 images
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json());
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -776,6 +767,8 @@ app.get('/api/students/search', (req, res) => {
     const { q = '', withFridgesOnly = 'false' } = req.query;
 
     let query;
+    const searchPattern = `${q}%`; // Prefix search only
+
     if (withFridgesOnly === 'true') {
       // Only return students with active fridge checkouts
       // Fridge checkouts are identified by items with name like "Fridge #%"
@@ -811,7 +804,7 @@ app.get('/api/students/search', (req, res) => {
       `;
     }
 
-    const students = db.prepare(query).all(`%${q}%`, `%${q}%`);
+    const students = db.prepare(query).all(searchPattern, searchPattern);
     res.json(students);
   } catch (error) {
     console.error('Error searching students:', error);
@@ -888,6 +881,7 @@ app.get('/api/inventory/search', (req, res) => {
 
     // Query items table and aggregate by item_name
     // Only include approved donated items (these are available for checkout to students)
+    // Exclude fridge records: items with fridge_company_id OR items named "Fridge" or "Fridge #X"
     const query = `
       SELECT
         item_name as name,
@@ -897,6 +891,8 @@ app.get('/api/inventory/search', (req, res) => {
       FROM items
       WHERE item_name LIKE ?
         AND verification_status = 'approved'
+        AND fridge_company_id IS NULL
+        AND item_name NOT LIKE 'Fridge%'
       GROUP BY item_name
       HAVING COUNT(*) > 0
       ORDER BY item_name
@@ -921,16 +917,85 @@ app.get('/api/inventory/search', (req, res) => {
   }
 });
 
+// Get all inventory items (admin only - no auth yet, will add later)
+app.get('/api/inventory', (req, res) => {
+  try {
+    const items = db.prepare(`
+      SELECT id, sku, name, category, current_quantity, available_quantity
+      FROM inventory_items
+      ORDER BY name
+    `).all();
+
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    res.status(500).json({ error: 'Failed to fetch inventory' });
+  }
+});
+
+// Create new inventory item
+app.post('/api/inventory', (req, res) => {
+  try {
+    const { name, category = 'Other', quantity = 1, createdBy } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Item name is required' });
+    }
+
+    // Generate SKU (simple format: first 3 letters + random number)
+    const prefix = name.substring(0, 3).toUpperCase();
+    const randomNum = Math.floor(Math.random() * 100000);
+    const sku = `${prefix}${randomNum}`;
+
+    const stmt = db.prepare(`
+      INSERT INTO inventory_items (sku, name, category, current_quantity, available_quantity, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const result = stmt.run(sku, name.trim(), category, quantity, quantity, createdBy || null);
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid,
+      sku,
+      name: name.trim(),
+      category,
+      current_quantity: quantity,
+      available_quantity: quantity
+    });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'An item with this SKU already exists' });
+    }
+    console.error('Error creating inventory item:', error);
+    res.status(500).json({ error: 'Failed to create inventory item' });
+  }
+});
+
 // Fridge Management Endpoints
-// Get fridge attribute options (from dynamic tables)
+// Get fridge attribute options (from fridges table)
 app.get('/api/fridges/attributes', (req, res) => {
   try {
-    const sizes = db.prepare('SELECT name FROM fridge_sizes ORDER BY id').all().map(r => r.name);
-    const colors = db.prepare('SELECT name FROM fridge_colors ORDER BY id').all().map(r => r.name);
-    const brands = db.prepare('SELECT name FROM fridge_brands ORDER BY name').all().map(r => r.name);
-    const conditions = db.prepare('SELECT name FROM fridge_conditions ORDER BY id').all().map(r => r.name);
+    // Get brands from database
+    const brands = db.prepare('SELECT DISTINCT brand FROM fridges WHERE brand IS NOT NULL ORDER BY brand').all().map(r => r.brand);
 
-    res.json({ sizes, colors, brands, conditions });
+    // Get sizes from database and clean up "Full Size with Freezer" -> "Full Size"
+    // Since freezer is a separate field in the form
+    const dbSizes = db.prepare('SELECT DISTINCT size FROM fridges WHERE size IS NOT NULL').all().map(r => r.size);
+    const sizes = [...new Set(dbSizes.map(s => s.replace(/\s+with\s+Freezer/i, '').trim()))].sort();
+
+    // Standard fridge colors (color field exists but not populated in database)
+    const colors = ['White', 'Black', 'Stainless Steel', 'Silver', 'Gray', 'Red', 'Blue'];
+
+    // Standard fridge conditions (database only has Good/Needs Repair, but provide full range)
+    const conditions = ['Excellent', 'Great', 'Good', 'Fair', 'Needs Repair', 'Poor'];
+
+    res.json({
+      sizes,
+      colors,
+      brands,
+      conditions
+    });
   } catch (error) {
     console.error('Error fetching fridge attributes:', error);
     res.status(500).json({ error: 'Failed to fetch fridge attributes' });
@@ -1522,9 +1587,9 @@ app.patch('/api/fridges/:id', (req, res) => {
 
 // Check-Out Endpoints
 // Create check-out transaction
-app.post('/api/checkouts-out', async (req, res) => {
+app.post('/api/checkouts-out', (req, res) => {
   try {
-    const { student, items, checkedOutBy, notes, checkoutPhoto } = req.body;
+    const { student, items, checkedOutBy, notes } = req.body;
 
     if (!student || !student.name || !student.email) {
       return res.status(400).json({ error: 'Student information is required' });
@@ -1534,86 +1599,67 @@ app.post('/api/checkouts-out', async (req, res) => {
       return res.status(400).json({ error: 'At least one item is required' });
     }
 
-    if (!checkoutPhoto) {
-      return res.status(400).json({ error: 'Checkout photo is required' });
-    }
-
-    // Upload photo to Google Drive (or store as base64 if not configured)
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `checkout-${student.email}-${timestamp}.jpg`;
-    const photoUrl = await googleDriveService.uploadPhoto(checkoutPhoto, filename);
-
-    // Calculate year range
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const month = now.getMonth();
-    const yearRange = month >= 7 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
-
     // Start transaction
     db.prepare('BEGIN').run();
 
     try {
-      // Create checkout record in checkouts table (using actual database structure)
+      // Create or update student
+      const existingStudent = db.prepare('SELECT id FROM students WHERE email = ?').get(student.email);
+      let studentId;
+
+      if (existingStudent) {
+        studentId = existingStudent.id;
+        db.prepare(`
+          UPDATE students
+          SET name = ?, housing_assignment = ?, graduation_year = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(student.name, student.housing || null, student.gradYear || null, studentId);
+      } else {
+        const result = db.prepare(`
+          INSERT INTO students (name, email, housing_assignment, graduation_year)
+          VALUES (?, ?, ?, ?)
+        `).run(student.name, student.email, student.housing || null, student.gradYear || null);
+        studentId = result.lastInsertRowid;
+      }
+
+      // Create checkout record
       const checkoutResult = db.prepare(`
-        INSERT INTO checkouts (
-          date,
-          owner_name,
-          email,
-          housing_assignment,
-          graduation_year,
-          year_range,
-          notes,
-          needs_approval,
-          verification_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        new Date().toISOString(),
-        student.name,
-        student.email,
-        student.housing || '',
-        student.gradYear || '',
-        yearRange,
-        notes || '',
-        0,  // Checkouts start as not needing approval
-        'pending'  // Verification status starts as pending
-      );
+        INSERT INTO checkouts_out (student_id, checked_out_by, notes)
+        VALUES (?, ?, ?)
+      `).run(studentId, checkedOutBy || null, notes || null);
 
       const checkoutId = checkoutResult.lastInsertRowid;
 
-      // Add each item to items table with the shared photo URL
+      // Add checkout items and update inventory
       for (const item of items) {
-        // Get item details from database by searching for matching item name
-        const itemDetails = db.prepare(`
-          SELECT DISTINCT item_name
-          FROM items
-          WHERE item_name LIKE ?
-            AND fridge_company_id IS NULL
-            AND item_name NOT LIKE 'Fridge%'
-          LIMIT 1
-        `).get(`${item.name || item.itemName || 'Item'}%`);
+        if (item.type === 'item') {
+          // Add checkout item
+          db.prepare(`
+            INSERT INTO checkout_items (checkout_id, item_id, quantity)
+            VALUES (?, ?, ?)
+          `).run(checkoutId, item.itemId, item.quantity);
 
-        const itemName = itemDetails ? itemDetails.item_name : (item.name || item.itemName || 'Item');
+          // Update inventory quantity
+          db.prepare(`
+            UPDATE inventory_items
+            SET available_quantity = available_quantity - ?
+            WHERE id = ?
+          `).run(item.quantity, item.itemId);
 
-        // Insert item with photo URL
-        db.prepare(`
-          INSERT INTO items (
-            checkout_id,
-            item_name,
-            item_quantity,
-            year_range,
-            verification_status,
-            image_url,
-            description
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          checkoutId,
-          itemName,
-          item.quantity || 1,
-          yearRange,
-          'pending',
-          photoUrl,
-          `Checked out by ${student.name}`
-        );
+        } else if (item.type === 'fridge') {
+          // Add checkout item
+          db.prepare(`
+            INSERT INTO checkout_items (checkout_id, fridge_id, quantity)
+            VALUES (?, ?, 1)
+          `).run(checkoutId, item.fridgeId);
+
+          // Update fridge status
+          db.prepare(`
+            UPDATE fridges
+            SET status = 'checked_out'
+            WHERE id = ?
+          `).run(item.fridgeId);
+        }
       }
 
       db.prepare('COMMIT').run();
@@ -1621,7 +1667,6 @@ app.post('/api/checkouts-out', async (req, res) => {
       res.json({
         success: true,
         checkoutId,
-        photoUrl,
         message: 'Items checked out successfully'
       });
 
@@ -1631,7 +1676,7 @@ app.post('/api/checkouts-out', async (req, res) => {
     }
   } catch (error) {
     console.error('Error creating checkout:', error);
-    res.status(500).json({ error: 'Failed to create checkout', details: error.message });
+    res.status(500).json({ error: 'Failed to create checkout' });
   }
 });
 
@@ -1692,20 +1737,35 @@ app.get('/api/checkins/search', (req, res) => {
     const { q = '' } = req.query;
     const searchPattern = `${q}%`; // Prefix search only
 
-    // Search inventory table
+    // Search items table and aggregate by item_name
+    // Include ALL items (approved, pending, flagged) for check-in
+    // Exclude fridge records: items with fridge_company_id OR items named "Fridge" or "Fridge #X"
     const items = db.prepare(`
       SELECT
-        id,
         item_name as name,
-        quantity as current_quantity,
-        'INV-' || id as sku,
-        category,
+        COUNT(*) as available_quantity,
+        'ITEM-' || SUBSTR(UPPER(item_name), 1, 3) || '-' || MIN(id) as sku,
+        'Donation' as category,
         'item' as type
-      FROM inventory
+      FROM items
       WHERE item_name LIKE ?
+        AND fridge_company_id IS NULL
+        AND item_name NOT LIKE 'Fridge%'
+      GROUP BY item_name
+      HAVING COUNT(*) > 0
       ORDER BY item_name
       LIMIT 25
     `).all(searchPattern);
+
+    // Add id field for each aggregated item
+    const itemsWithId = items.map((item, index) => ({
+      id: index + 2000, // Use different offset for check-in
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      current_quantity: item.available_quantity,
+      type: 'item'
+    }));
 
     // Search fridges (note: table is 'fridges')
     const fridges = db.prepare(`
@@ -1720,7 +1780,7 @@ app.get('/api/checkins/search', (req, res) => {
       LIMIT 25
     `).all(searchPattern, searchPattern);
 
-    res.json([...items, ...fridges]);
+    res.json([...itemsWithId, ...fridges]);
   } catch (error) {
     console.error('Error searching for check-in:', error);
     res.status(500).json({ error: 'Failed to search for check-in' });
@@ -1740,74 +1800,63 @@ app.post('/api/checkins', (req, res) => {
     db.prepare('BEGIN').run();
 
     try {
-      const addedItems = [];
+      // Create checkin record
+      const checkinResult = db.prepare(`
+        INSERT INTO checkins (checked_in_by, notes)
+        VALUES (?, ?)
+      `).run(checkedInBy || null, notes || null);
+
+      const checkinId = checkinResult.lastInsertRowid;
 
       // Process each item
       for (const item of items) {
         if (item.type === 'item') {
-          // Get item name from the item
-          const itemName = item.name || item.item_name;
-          const quantity = item.quantity || 1;
+          // Add checkin item
+          db.prepare(`
+            INSERT INTO checkin_items (checkin_id, item_id, quantity)
+            VALUES (?, ?, ?)
+          `).run(checkinId, item.itemId, item.quantity);
 
-          if (!itemName) {
-            throw new Error('Item name is required');
-          }
-
-          // Check if item exists in inventory
-          const existing = db.prepare('SELECT * FROM inventory WHERE item_name = ?').get(itemName);
-
-          if (existing) {
-            // Update existing inventory item
-            const newQuantity = existing.quantity + quantity;
-            db.prepare(`
-              UPDATE inventory
-              SET quantity = ?
-              WHERE item_name = ?
-            `).run(newQuantity, itemName);
-
-            addedItems.push({ item_name: itemName, quantity: newQuantity, action: 'updated' });
-          } else {
-            // Insert new inventory item
-            db.prepare(`
-              INSERT INTO inventory (item_name, quantity, description)
-              VALUES (?, ?, ?)
-            `).run(itemName, quantity, item.description || null);
-
-            addedItems.push({ item_name: itemName, quantity: quantity, action: 'created' });
-          }
+          // Update inventory quantity
+          db.prepare(`
+            UPDATE inventory_items
+            SET available_quantity = available_quantity + ?,
+                current_quantity = current_quantity + ?
+            WHERE id = ?
+          `).run(item.quantity, item.quantity, item.itemId);
 
         } else if (item.type === 'fridge') {
           // For fridges, check if this is a return or new fridge
           const existingFridge = db.prepare('SELECT id, fridge_number FROM fridges WHERE id = ?').get(item.fridgeId);
 
           if (existingFridge) {
-            // Returning an existing fridge - update status to available
+            // Returning an existing fridge
+            db.prepare(`
+              INSERT INTO checkin_items (checkin_id, fridge_id, quantity)
+              VALUES (?, ?, 1)
+            `).run(checkinId, item.fridgeId);
+
+            // Update fridge status to available
             db.prepare(`
               UPDATE fridges
               SET status = 'available'
               WHERE id = ?
             `).run(item.fridgeId);
-
-            addedItems.push({
-              type: 'fridge',
-              fridge_number: existingFridge.fridge_number,
-              action: 'returned'
-            });
           } else {
             // New fridge being checked in - auto-generate fridge number
             const maxNumber = db.prepare('SELECT MAX(CAST(fridge_number AS INTEGER)) as max FROM fridges').get().max || 0;
             const newFridgeNumber = String(maxNumber + 1);
 
-            db.prepare(`
+            const fridgeResult = db.prepare(`
               INSERT INTO fridges (fridge_number, has_freezer, brand, status, condition)
               VALUES (?, ?, ?, 'available', 'Good')
             `).run(newFridgeNumber, item.hasFreezer ? 1 : 0, item.brand || 'Unknown');
 
-            addedItems.push({
-              type: 'fridge',
-              fridge_number: newFridgeNumber,
-              action: 'created'
-            });
+            // Add checkin item
+            db.prepare(`
+              INSERT INTO checkin_items (checkin_id, fridge_id, quantity)
+              VALUES (?, ?, 1)
+            `).run(checkinId, fridgeResult.lastInsertRowid);
           }
         }
       }
@@ -1816,8 +1865,8 @@ app.post('/api/checkins', (req, res) => {
 
       res.json({
         success: true,
-        items: addedItems,
-        message: `Successfully checked in ${addedItems.length} item(s) to inventory`
+        checkinId,
+        message: 'Items checked in successfully'
       });
 
     } catch (error) {
@@ -1830,259 +1879,96 @@ app.post('/api/checkins', (req, res) => {
   }
 });
 
-// ============================================
-// INVENTORY ENDPOINTS
-// ============================================
-
-// Get all inventory items
-app.get('/api/inventory', (req, res) => {
+// ===== SETTINGS ENDPOINTS =====
+// Get all settings
+app.get('/api/settings', (req, res) => {
   try {
-    const { search = '' } = req.query;
+    const settings = db.prepare(`
+      SELECT id, key, value, category, description, updated_at, updated_by
+      FROM settings
+      ORDER BY category, key
+    `).all();
 
-    let query = `
-      SELECT *
-      FROM inventory
-      ORDER BY item_name ASC
-    `;
+    // Parse JSON values
+    const parsedSettings = settings.map(setting => ({
+      ...setting,
+      value: JSON.parse(setting.value)
+    }));
 
-    let items = db.prepare(query).all();
-
-    // Apply search filter if provided
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
-      items = items.filter(item =>
-        item.item_name?.toLowerCase().includes(searchLower) ||
-        item.description?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    res.json(items);
+    res.json(parsedSettings);
   } catch (error) {
-    console.error('Error fetching inventory:', error);
-    res.status(500).json({ error: 'Failed to fetch inventory' });
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
   }
 });
 
-// Add or update inventory item
-app.post('/api/inventory', (req, res) => {
+// Get specific setting by key
+app.get('/api/settings/:key', (req, res) => {
   try {
-    const { item_name, name, quantity, description, category } = req.body;
+    const { key } = req.params;
+    const setting = db.prepare(`
+      SELECT id, key, value, category, description, updated_at, updated_by
+      FROM settings
+      WHERE key = ?
+    `).get(key);
 
-    // Accept both item_name and name for compatibility
-    const itemName = item_name || name;
-    const itemCategory = category || 'Other';
-
-    if (!itemName || quantity === undefined) {
-      return res.status(400).json({ error: 'item_name (or name) and quantity are required' });
+    if (!setting) {
+      return res.status(404).json({ error: 'Setting not found' });
     }
 
-    // Check if item already exists
-    const existing = db.prepare('SELECT * FROM inventory WHERE item_name = ?').get(itemName);
+    // Parse JSON value
+    setting.value = JSON.parse(setting.value);
 
-    if (existing) {
-      // Update existing item - add to quantity
-      const newQuantity = existing.quantity + quantity;
-      const stmt = db.prepare(`
-        UPDATE inventory
-        SET quantity = ?, description = COALESCE(?, description), category = COALESCE(?, category)
-        WHERE item_name = ?
-      `);
-      stmt.run(newQuantity, description, itemCategory, itemName);
-
-      const updated = db.prepare('SELECT * FROM inventory WHERE item_name = ?').get(itemName);
-      res.json({ message: 'Inventory updated', item: updated });
-    } else {
-      // Insert new item
-      const stmt = db.prepare(`
-        INSERT INTO inventory (item_name, quantity, description, category)
-        VALUES (?, ?, ?, ?)
-      `);
-      const result = stmt.run(itemName, quantity, description, itemCategory);
-
-      const newItem = db.prepare('SELECT * FROM inventory WHERE id = ?').get(result.lastInsertRowid);
-      res.json({ message: 'Item added to inventory', item: newItem });
-    }
+    res.json(setting);
   } catch (error) {
-    console.error('Error adding/updating inventory:', error);
-    res.status(500).json({ error: 'Failed to add/update inventory' });
+    console.error('Error fetching setting:', error);
+    res.status(500).json({ error: 'Failed to fetch setting' });
   }
 });
 
-// Update inventory item quantity
-app.patch('/api/inventory/:id', (req, res) => {
+// Update specific setting
+app.patch('/api/settings/:key', (req, res) => {
   try {
-    const { id } = req.params;
-    const { quantity, description } = req.body;
+    const { key } = req.params;
+    const { value, updated_by } = req.body;
 
-    const updates = [];
-    const params = [];
-
-    if (quantity !== undefined) {
-      updates.push('quantity = ?');
-      params.push(quantity);
+    // Validate that setting exists
+    const existingSetting = db.prepare('SELECT id FROM settings WHERE key = ?').get(key);
+    if (!existingSetting) {
+      return res.status(404).json({ error: 'Setting not found' });
     }
 
-    if (description !== undefined) {
-      updates.push('description = ?');
-      params.push(description);
+    // Validate value is provided
+    if (value === undefined || value === null) {
+      return res.status(400).json({ error: 'Value is required' });
     }
 
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-
-    params.push(id);
-
+    // Update setting
     const stmt = db.prepare(`
-      UPDATE inventory
-      SET ${updates.join(', ')}
-      WHERE id = ?
+      UPDATE settings
+      SET value = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE key = ?
     `);
-    stmt.run(...params);
 
-    const updated = db.prepare('SELECT * FROM inventory WHERE id = ?').get(id);
-    res.json({ message: 'Inventory item updated', item: updated });
-  } catch (error) {
-    console.error('Error updating inventory:', error);
-    res.status(500).json({ error: 'Failed to update inventory' });
-  }
-});
-
-// Delete inventory item
-app.delete('/api/inventory/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const stmt = db.prepare('DELETE FROM inventory WHERE id = ?');
-    const result = stmt.run(id);
+    const result = stmt.run(JSON.stringify(value), updated_by || 'admin', key);
 
     if (result.changes === 0) {
-      return res.status(404).json({ error: 'Item not found' });
+      return res.status(500).json({ error: 'Failed to update setting' });
     }
 
-    res.json({ message: 'Item deleted from inventory' });
+    // Return updated setting
+    const updatedSetting = db.prepare(`
+      SELECT id, key, value, category, description, updated_at, updated_by
+      FROM settings
+      WHERE key = ?
+    `).get(key);
+
+    updatedSetting.value = JSON.parse(updatedSetting.value);
+
+    res.json(updatedSetting);
   } catch (error) {
-    console.error('Error deleting inventory:', error);
-    res.status(500).json({ error: 'Failed to delete inventory item' });
-  }
-});
-
-// ============================================
-// Item Variants Endpoints
-// ============================================
-
-// Get all variants for an inventory item
-app.get('/api/inventory/:id/variants', (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const variants = db.prepare(`
-      SELECT * FROM item_variants
-      WHERE inventory_id = ?
-      ORDER BY variant_description ASC
-    `).all(id);
-
-    res.json(variants);
-  } catch (error) {
-    console.error('Error fetching variants:', error);
-    res.status(500).json({ error: 'Failed to fetch variants' });
-  }
-});
-
-// Add or update a variant for an item
-app.post('/api/inventory/:id/variants', (req, res) => {
-  try {
-    const { id } = req.params;
-    const { variant_description, quantity = 0 } = req.body;
-
-    if (!variant_description || !variant_description.trim()) {
-      return res.status(400).json({ error: 'variant_description is required' });
-    }
-
-    const existing = db.prepare(`
-      SELECT * FROM item_variants
-      WHERE inventory_id = ? AND variant_description = ?
-    `).get(id, variant_description);
-
-    if (existing) {
-      // Update quantity
-      const newQuantity = existing.quantity + quantity;
-      db.prepare(`
-        UPDATE item_variants
-        SET quantity = ?
-        WHERE id = ?
-      `).run(newQuantity, existing.id);
-
-      const updated = db.prepare('SELECT * FROM item_variants WHERE id = ?').get(existing.id);
-      res.json({ message: 'Variant updated', variant: updated });
-    } else {
-      // Insert new variant
-      const stmt = db.prepare(`
-        INSERT INTO item_variants (inventory_id, variant_description, quantity)
-        VALUES (?, ?, ?)
-      `);
-      const result = stmt.run(id, variant_description, quantity);
-
-      const newVariant = db.prepare('SELECT * FROM item_variants WHERE id = ?').get(result.lastInsertRowid);
-      res.json({ message: 'Variant added', variant: newVariant });
-    }
-  } catch (error) {
-    console.error('Error adding/updating variant:', error);
-    res.status(500).json({ error: 'Failed to add/update variant' });
-  }
-});
-
-// Update a specific variant
-app.patch('/api/variants/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-    const { quantity, variant_description } = req.body;
-
-    const updates = [];
-    const params = [];
-
-    if (quantity !== undefined) {
-      updates.push('quantity = ?');
-      params.push(quantity);
-    }
-
-    if (variant_description !== undefined) {
-      updates.push('variant_description = ?');
-      params.push(variant_description);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-
-    params.push(id);
-    const stmt = db.prepare(`UPDATE item_variants SET ${updates.join(', ')} WHERE id = ?`);
-    stmt.run(...params);
-
-    const updated = db.prepare('SELECT * FROM item_variants WHERE id = ?').get(id);
-    res.json({ message: 'Variant updated', variant: updated });
-  } catch (error) {
-    console.error('Error updating variant:', error);
-    res.status(500).json({ error: 'Failed to update variant' });
-  }
-});
-
-// Delete a variant
-app.delete('/api/variants/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const stmt = db.prepare('DELETE FROM item_variants WHERE id = ?');
-    const result = stmt.run(id);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Variant not found' });
-    }
-
-    res.json({ message: 'Variant deleted' });
-  } catch (error) {
-    console.error('Error deleting variant:', error);
-    res.status(500).json({ error: 'Failed to delete variant' });
+    console.error('Error updating setting:', error);
+    res.status(500).json({ error: 'Failed to update setting' });
   }
 });
 
@@ -2105,11 +1991,7 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/verification/checkouts    - Get grouped checkouts for verification`);
   console.log(`   PATCH /api/verification/checkouts/:checkoutId - Update checkout verification status`);
   console.log(`   GET  /api/analytics/top-items       - Get top items (optional ?year=)`);
-  console.log(`   GET  /api/items/search              - Search items (required ?query=)`);
-  console.log(`   GET  /api/inventory                 - Get all inventory items (optional ?search=)`);
-  console.log(`   POST /api/inventory                 - Add or update inventory item`);
-  console.log(`   PATCH /api/inventory/:id            - Update inventory item`);
-  console.log(`   DELETE /api/inventory/:id           - Delete inventory item\n`);
+  console.log(`   GET  /api/items/search              - Search items (required ?query=)\n`);
 });
 
 // Graceful shutdown
