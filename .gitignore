@@ -62,3 +62,8 @@ extract-donors-from-drive.md
 
 # Test scripts
 test-import.sh
+
+# SQLite temporary files
+*.db-journal
+*.db-wal
+*.db-shm
