@@ -965,6 +965,36 @@ app.post('/api/fridges/attributes/conditions', (req, res) => {
   }
 });
 
+// GET /api/fridges/checkouts/active - Get all active checkouts (MUST BE BEFORE :studentEmail route)
+app.get('/api/fridges/checkouts/active', (req, res) => {
+  try {
+    const checkouts = db.prepare(`
+      SELECT
+        fc.id,
+        fi.fridge_number,
+        fi.brand,
+        fi.size,
+        fi.color,
+        fi.condition,
+        fc.student_name,
+        fc.student_email,
+        fc.housing_assignment,
+        fc.checkout_date,
+        fc.expected_return_date,
+        fc.status
+      FROM fridge_checkouts fc
+      JOIN fridge_inventory fi ON fi.id = fc.fridge_id
+      WHERE fc.status = 'active'
+      ORDER BY fc.checkout_date DESC
+    `).all();
+
+    res.json({ checkouts });
+  } catch (error) {
+    console.error('Error fetching active checkouts:', error);
+    res.status(500).json({ error: 'Failed to fetch checkouts' });
+  }
+});
+
 // Get student's active fridge checkouts
 app.get('/api/fridges/checkouts/:studentEmail', (req, res) => {
   try {
@@ -1175,36 +1205,6 @@ app.get('/api/fridges/stats', (req, res) => {
   } catch (error) {
     console.error('Error fetching fridge stats:', error);
     res.status(500).json({ error: 'Failed to fetch statistics' });
-  }
-});
-
-// GET /api/fridges/checkouts/active - Get all active checkouts (BEFORE :number route)
-app.get('/api/fridges/checkouts/active', (req, res) => {
-  try {
-    const checkouts = db.prepare(`
-      SELECT
-        fc.id,
-        fi.fridge_number,
-        fi.brand,
-        fi.size,
-        fi.color,
-        fi.condition,
-        fc.student_name,
-        fc.student_email,
-        fc.housing_assignment,
-        fc.checkout_date,
-        fc.expected_return_date,
-        fc.status
-      FROM fridge_checkouts fc
-      JOIN fridge_inventory fi ON fi.id = fc.fridge_id
-      WHERE fc.status = 'active'
-      ORDER BY fc.checkout_date DESC
-    `).all();
-
-    res.json({ checkouts });
-  } catch (error) {
-    console.error('Error fetching active checkouts:', error);
-    res.status(500).json({ error: 'Failed to fetch checkouts' });
   }
 });
 
