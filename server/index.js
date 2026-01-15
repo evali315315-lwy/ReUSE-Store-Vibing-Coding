@@ -875,17 +875,37 @@ app.post('/api/students', (req, res) => {
 app.get('/api/inventory/search', (req, res) => {
   try {
     const { q = '' } = req.query;
+    const searchPattern = `${q}%`; // Prefix search only
 
+    // Query items table and aggregate by item_name
+    // Only include approved donated items (these are available for checkout to students)
     const query = `
-      SELECT id, sku, name, category, available_quantity
-      FROM inventory_items
-      WHERE (name LIKE ? OR sku LIKE ?) AND available_quantity > 0
-      ORDER BY name
+      SELECT
+        item_name as name,
+        COUNT(*) as available_quantity,
+        'ITEM-' || SUBSTR(UPPER(item_name), 1, 3) || '-' || MIN(id) as sku,
+        'Donation' as category
+      FROM items
+      WHERE item_name LIKE ?
+        AND verification_status = 'approved'
+      GROUP BY item_name
+      HAVING COUNT(*) > 0
+      ORDER BY item_name
       LIMIT 50
     `;
 
-    const items = db.prepare(query).all(`%${q}%`, `%${q}%`);
-    res.json(items);
+    const items = db.prepare(query).all(searchPattern);
+
+    // Add an id field for each aggregated item (use a hash of the name)
+    const itemsWithId = items.map((item, index) => ({
+      id: index + 1000, // Use offset to avoid conflicts
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      available_quantity: item.available_quantity
+    }));
+
+    res.json(itemsWithId);
   } catch (error) {
     console.error('Error searching inventory:', error);
     res.status(500).json({ error: 'Failed to search inventory' });
@@ -1696,30 +1716,49 @@ app.get('/api/checkouts-out/active', (req, res) => {
 app.get('/api/checkins/search', (req, res) => {
   try {
     const { q = '' } = req.query;
+    const searchPattern = `${q}%`; // Prefix search only
 
-    // Search inventory items
+    // Search items table and aggregate by item_name
+    // Include ALL items (approved, pending, flagged) for check-in
     const items = db.prepare(`
-      SELECT id, sku, name, category, current_quantity, 'item' as type
-      FROM inventory_items
-      WHERE name LIKE ? OR sku LIKE ?
+      SELECT
+        item_name as name,
+        COUNT(*) as available_quantity,
+        'ITEM-' || SUBSTR(UPPER(item_name), 1, 3) || '-' || MIN(id) as sku,
+        'Donation' as category,
+        'item' as type
+      FROM items
+      WHERE item_name LIKE ?
+      GROUP BY item_name
+      HAVING COUNT(*) > 0
+      ORDER BY item_name
       LIMIT 25
-    `).all(`%${q}%`, `%${q}%`);
+    `).all(searchPattern);
 
-    // Search fridges
+    // Add id field for each aggregated item
+    const itemsWithId = items.map((item, index) => ({
+      id: index + 2000, // Use different offset for check-in
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      current_quantity: item.available_quantity,
+      type: 'item'
+    }));
+
+    // Search fridges (note: table is 'fridges')
     const fridges = db.prepare(`
       SELECT
         id,
         fridge_number,
         brand,
-        has_freezer,
         status,
         'fridge' as type
       FROM fridges
-      WHERE fridge_number LIKE ? OR brand LIKE ?
+      WHERE CAST(fridge_number AS TEXT) LIKE ? OR brand LIKE ?
       LIMIT 25
-    `).all(`%${q}%`, `%${q}%`);
+    `).all(searchPattern, searchPattern);
 
-    res.json([...items, ...fridges]);
+    res.json([...itemsWithId, ...fridges]);
   } catch (error) {
     console.error('Error searching for check-in:', error);
     res.status(500).json({ error: 'Failed to search for check-in' });
