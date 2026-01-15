@@ -15,28 +15,30 @@ The ReUSE Store website is a React-based application with a green/environmental 
 - 🎨 Custom green eco-friendly theme with Tailwind CSS
 - 📊 Interactive charts using Recharts
 - 📝 Form validation with React Hook Form and Zod
-- 🔐 Firebase Authentication for admin access (ready to implement)
-- 📊 Google Sheets integration for data storage (ready to implement)
+- 💾 SQLite database with REST API backend
+- 📦 Full checkout and item tracking system
+- 🧊 Fridge inventory and rental management
+- 📸 Photo verification for donations
 - 📱 Fully responsive design
 - ♿ Accessible UI components
 
 ## 🚀 Tech Stack
 
-- **Frontend Framework**: React 18 with Vite
-- **Routing**: React Router v6
+- **Frontend Framework**: React 19 with Vite
+- **Backend**: Node.js + Express
+- **Database**: SQLite (better-sqlite3)
+- **Routing**: React Router v7
 - **Styling**: Tailwind CSS with custom eco theme
 - **Charts**: Recharts
 - **Form Management**: React Hook Form + Zod
 - **Icons**: Lucide React
 - **Notifications**: React Hot Toast
-- **Authentication**: Firebase (to be configured)
-- **Data Storage**: Google Sheets API (to be configured)
+- **Authentication**: Firebase
+- **Data Storage**: SQLite database with REST API
 
 ## 📋 Prerequisites
 
 - Node.js 18+ and npm
-- A Google account (for Google Sheets API)
-- A Firebase account (for authentication)
 
 ## 🛠️ Installation
 
@@ -51,66 +53,54 @@ The ReUSE Store website is a React-based application with a green/environmental 
    npm install
    ```
 
-3. **Set up environment variables**
+3. **Start the development servers**
 
-   Copy the example environment file:
+   Run both backend and frontend:
    ```bash
-   cp .env.example .env.local
+   ./start-dev.sh
    ```
 
-   Then edit `.env.local` with your actual credentials (see Configuration section below).
-
-4. **Start the development server**
+   Or manually in separate terminals:
    ```bash
+   # Terminal 1 - Backend API (port 3001)
+   npm run server
+
+   # Terminal 2 - Frontend (port 5173)
    npm run dev
    ```
 
    The app will be available at `http://localhost:5173`
+   The API will be available at `http://localhost:3001`
 
 ## ⚙️ Configuration
 
-### Environment Variables
+### Database
 
-Create a `.env.local` file in the root directory with the following variables:
-
-```env
-# Google Sheets
-VITE_APPS_SCRIPT_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
-VITE_GOOGLE_SHEET_ID=YOUR_SHEET_ID
-
-# Firebase Authentication
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
-VITE_FIREBASE_APP_ID=your_app_id
-
-# Admin Configuration
-VITE_ADMIN_EMAILS=admin1@haverford.edu,admin2@haverford.edu
+The application uses SQLite for data storage. The database file is located at:
+```
+database/reuse-store.db
 ```
 
-### Google Sheets Setup
+The database is automatically created when you first run the server. No additional setup is required.
 
-1. **Create a Google Sheet** with two tabs:
-   - **Donations Log** - Columns: Timestamp, Donor Name, Donor Email, Object Name, Description, Submission ID
-   - **Yearly Statistics** - Columns: Year, Total Items, Total Weight (lbs), CO2 Saved (lbs), Last Updated, Updated By
+### Database Schema
 
-2. **Create Google Apps Script**:
-   - Open your Google Sheet
-   - Go to Extensions > Apps Script
-   - Copy the script from the implementation plan (see [/Users/evali/.claude/plans/joyful-conjuring-wall.md](/Users/evali/.claude/plans/joyful-conjuring-wall.md))
-   - Deploy as Web App
-   - Copy the deployment URL to `VITE_APPS_SCRIPT_URL`
+The application uses 4 main tables:
+- **checkouts** - Student checkout records
+- **items** - Individual donated items (linked to checkouts)
+- **fridges** - Fridge inventory and status tracking
+- **fridge_companies** - Legacy fridge company reference data (2019-2023 data only, 169 items)
 
-3. **Populate sample data** in the Yearly Statistics sheet (2021-2024)
+For detailed schema information, see [backend/README.md](backend/README.md)
 
-### Firebase Setup
+### Environment Variables (Optional)
 
-1. **Create a Firebase project** at https://console.firebase.google.com
-2. **Enable Google Sign-In** provider in Authentication
-3. **Add your domain** to authorized domains (include localhost for development)
-4. **Copy Firebase config** to your `.env.local` file
+If deploying to production, you may need to configure environment variables for:
+- API URLs
+- CORS settings
+- Firebase authentication (if implementing admin features)
+
+For development, no environment variables are required.
 
 ## 📂 Project Structure
 
@@ -128,6 +118,13 @@ src/
 ├── context/            # React context providers
 ├── utils/              # Utility functions
 └── assets/             # Images and styles
+
+server/
+└── index.js            # Express API server
+
+database/
+├── reuse-store.db      # SQLite database
+└── *.sql               # Migration scripts
 ```
 
 ## 🎨 Customization
@@ -151,14 +148,14 @@ colors: {
 
 To update the About page content, edit [src/components/about/AboutContent.jsx](src/components/about/AboutContent.jsx). Update the placeholder text with actual ReUSE Store information.
 
-## 👥 Admin Features (To Be Implemented)
+## 👥 Admin Features
 
-Admins can:
-- Sign in with Google (@haverford.edu email)
-- Edit yearly statistics data
-- View audit trail of changes
-
-To add new admins, update the `VITE_ADMIN_EMAILS` environment variable.
+Current admin features include:
+- Photo verification system for donations
+- Database viewer for all checkouts and items
+- Fridge inventory management
+- Checkout and item editing capabilities
+- Statistics dashboard
 
 ## 🚢 Deployment
 
@@ -186,7 +183,7 @@ This is a full-stack application with:
 
 3. **Configure**
    - Update CORS in [server/index.js](server/index.js) with your Vercel URL
-   - Add Vercel domain to Firebase authorized domains
+   - Add `VITE_API_URL` environment variable in Vercel pointing to your Render API
    - Test all features
 
 ### Local Development
@@ -207,39 +204,46 @@ npm run dev
 
 ## 📝 Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
+- `npm run dev` - Start frontend development server (port 5173)
+- `npm run server` - Start backend API server (port 3001)
+- `npm run build` - Build frontend for production
 - `npm run preview` - Preview production build locally
 - `npm run lint` - Run ESLint (if configured)
 
-## 🔧 Next Steps
+## 🔧 Current Implementation Status
 
-The current implementation includes:
-- ✅ Complete UI for all three pages
+The application is fully functional with:
+- ✅ Complete UI for all pages
+- ✅ SQLite database with REST API
+- ✅ Full checkout and item tracking system
+- ✅ Fridge inventory and rental management
+- ✅ Photo verification system
+- ✅ Database viewer and admin tools
 - ✅ Form validation for donations
 - ✅ Interactive statistics charts
 - ✅ Responsive design
-- ✅ Mock data for testing
 
-To complete the full functionality:
-1. Set up Google Sheets API integration (see plan file)
-2. Implement Firebase Authentication
-3. Connect DonationForm to Google Sheets
-4. Add admin editing capability for statistics
-5. Deploy to production
+Optional enhancements:
+- Firebase Authentication for admin access control
+- Additional reporting and analytics features
+- Email notifications for checkouts/returns
+- Deploy to production
 
 ## 🤝 Contributing
 
 For student workers and developers:
 
-### Adding New Admins
-Update the `VITE_ADMIN_EMAILS` environment variable in your deployment platform settings.
-
 ### Updating About Page Content
-Edit [src/components/about/AboutContent.jsx](src/components/about/AboutContent.jsx) with the actual store information from the Google Doc.
+Edit [src/components/about/AboutContent.jsx](src/components/about/AboutContent.jsx) with the actual store information.
 
-### Modifying Statistics
-Once Google Sheets integration is complete, admins can update statistics directly through the website.
+### Managing Checkouts
+Use the Database Viewer page to view and manage all checkouts and items.
+
+### Verifying Donations
+Use the Photo Verification page to review and approve donations with photos.
+
+### Database Migrations
+Migration scripts are stored in the `database/` folder. See [DATABASE_CONSOLIDATION_COMPLETE.md](DATABASE_CONSOLIDATION_COMPLETE.md) for recent migration history.
 
 ## 📄 License
 

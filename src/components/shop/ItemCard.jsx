@@ -7,19 +7,18 @@ function ItemCard({ item }) {
   // Determine status badge color
   const getBadgeStyles = () => {
     if (!isAvailable) {
-      return 'bg-gray-100 text-gray-600';
+      return 'bg-red-100 text-red-700';
     }
     if (isLowStock) {
       return 'bg-yellow-100 text-yellow-700';
     }
-    return 'bg-eco-primary-100 text-eco-primary-700';
+    return 'bg-green-100 text-green-700';
   };
 
   // Get availability text
   const getAvailabilityText = () => {
-    if (!isAvailable) return 'Out of stock';
-    if (item.available === 1) return '1 available';
-    return `${item.available} available`;
+    if (!isAvailable) return 'Out of Stock';
+    return 'Available';
   };
 
   return (
@@ -53,19 +52,10 @@ function ItemCard({ item }) {
         </div>
       )}
 
-      {/* SKU */}
-      {item.sku && (
-        <p className="text-sm text-gray-500 mb-2">
-          SKU: {item.sku}
-        </p>
-      )}
-
-      {/* Description */}
-      {item.description && item.description !== item.name && (
-        <p className="text-gray-600 text-sm">
-          {item.description}
-        </p>
-      )}
+      {/* Quantity display */}
+      <p className="text-sm text-gray-600 font-medium">
+        Quantity: {item.quantity || 0}
+      </p>
     </div>
   );
 }

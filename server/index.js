@@ -767,8 +767,6 @@ app.get('/api/students/search', (req, res) => {
     const { q = '', withFridgesOnly = 'false' } = req.query;
 
     let query;
-    const searchPattern = `${q}%`; // Prefix search only
-
     if (withFridgesOnly === 'true') {
       // Only return students with active fridge checkouts
       // Fridge checkouts are identified by items with name like "Fridge #%"
@@ -804,7 +802,7 @@ app.get('/api/students/search', (req, res) => {
       `;
     }
 
-    const students = db.prepare(query).all(searchPattern, searchPattern);
+    const students = db.prepare(query).all(`%${q}%`, `%${q}%`);
     res.json(students);
   } catch (error) {
     console.error('Error searching students:', error);
@@ -881,7 +879,6 @@ app.get('/api/inventory/search', (req, res) => {
 
     // Query items table and aggregate by item_name
     // Only include approved donated items (these are available for checkout to students)
-    // Exclude fridge records: items with fridge_company_id OR items named "Fridge" or "Fridge #X"
     const query = `
       SELECT
         item_name as name,
@@ -891,8 +888,6 @@ app.get('/api/inventory/search', (req, res) => {
       FROM items
       WHERE item_name LIKE ?
         AND verification_status = 'approved'
-        AND fridge_company_id IS NULL
-        AND item_name NOT LIKE 'Fridge%'
       GROUP BY item_name
       HAVING COUNT(*) > 0
       ORDER BY item_name
@@ -917,85 +912,16 @@ app.get('/api/inventory/search', (req, res) => {
   }
 });
 
-// Get all inventory items (admin only - no auth yet, will add later)
-app.get('/api/inventory', (req, res) => {
-  try {
-    const items = db.prepare(`
-      SELECT id, sku, name, category, current_quantity, available_quantity
-      FROM inventory_items
-      ORDER BY name
-    `).all();
-
-    res.json(items);
-  } catch (error) {
-    console.error('Error fetching inventory:', error);
-    res.status(500).json({ error: 'Failed to fetch inventory' });
-  }
-});
-
-// Create new inventory item
-app.post('/api/inventory', (req, res) => {
-  try {
-    const { name, category = 'Other', quantity = 1, createdBy } = req.body;
-
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'Item name is required' });
-    }
-
-    // Generate SKU (simple format: first 3 letters + random number)
-    const prefix = name.substring(0, 3).toUpperCase();
-    const randomNum = Math.floor(Math.random() * 100000);
-    const sku = `${prefix}${randomNum}`;
-
-    const stmt = db.prepare(`
-      INSERT INTO inventory_items (sku, name, category, current_quantity, available_quantity, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(sku, name.trim(), category, quantity, quantity, createdBy || null);
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid,
-      sku,
-      name: name.trim(),
-      category,
-      current_quantity: quantity,
-      available_quantity: quantity
-    });
-  } catch (error) {
-    if (error.message.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'An item with this SKU already exists' });
-    }
-    console.error('Error creating inventory item:', error);
-    res.status(500).json({ error: 'Failed to create inventory item' });
-  }
-});
-
 // Fridge Management Endpoints
-// Get fridge attribute options (from fridges table)
+// Get fridge attribute options (from dynamic tables)
 app.get('/api/fridges/attributes', (req, res) => {
   try {
-    // Get brands from database
-    const brands = db.prepare('SELECT DISTINCT brand FROM fridges WHERE brand IS NOT NULL ORDER BY brand').all().map(r => r.brand);
+    const sizes = db.prepare('SELECT name FROM fridge_sizes ORDER BY id').all().map(r => r.name);
+    const colors = db.prepare('SELECT name FROM fridge_colors ORDER BY id').all().map(r => r.name);
+    const brands = db.prepare('SELECT name FROM fridge_brands ORDER BY name').all().map(r => r.name);
+    const conditions = db.prepare('SELECT name FROM fridge_conditions ORDER BY id').all().map(r => r.name);
 
-    // Get sizes from database and clean up "Full Size with Freezer" -> "Full Size"
-    // Since freezer is a separate field in the form
-    const dbSizes = db.prepare('SELECT DISTINCT size FROM fridges WHERE size IS NOT NULL').all().map(r => r.size);
-    const sizes = [...new Set(dbSizes.map(s => s.replace(/\s+with\s+Freezer/i, '').trim()))].sort();
-
-    // Standard fridge colors (color field exists but not populated in database)
-    const colors = ['White', 'Black', 'Stainless Steel', 'Silver', 'Gray', 'Red', 'Blue'];
-
-    // Standard fridge conditions (database only has Good/Needs Repair, but provide full range)
-    const conditions = ['Excellent', 'Great', 'Good', 'Fair', 'Needs Repair', 'Poor'];
-
-    res.json({
-      sizes,
-      colors,
-      brands,
-      conditions
-    });
+    res.json({ sizes, colors, brands, conditions });
   } catch (error) {
     console.error('Error fetching fridge attributes:', error);
     res.status(500).json({ error: 'Failed to fetch fridge attributes' });
@@ -1737,35 +1663,20 @@ app.get('/api/checkins/search', (req, res) => {
     const { q = '' } = req.query;
     const searchPattern = `${q}%`; // Prefix search only
 
-    // Search items table and aggregate by item_name
-    // Include ALL items (approved, pending, flagged) for check-in
-    // Exclude fridge records: items with fridge_company_id OR items named "Fridge" or "Fridge #X"
+    // Search inventory table
     const items = db.prepare(`
       SELECT
+        id,
         item_name as name,
-        COUNT(*) as available_quantity,
-        'ITEM-' || SUBSTR(UPPER(item_name), 1, 3) || '-' || MIN(id) as sku,
-        'Donation' as category,
+        quantity as current_quantity,
+        'INV-' || id as sku,
+        category,
         'item' as type
-      FROM items
+      FROM inventory
       WHERE item_name LIKE ?
-        AND fridge_company_id IS NULL
-        AND item_name NOT LIKE 'Fridge%'
-      GROUP BY item_name
-      HAVING COUNT(*) > 0
       ORDER BY item_name
       LIMIT 25
     `).all(searchPattern);
-
-    // Add id field for each aggregated item
-    const itemsWithId = items.map((item, index) => ({
-      id: index + 2000, // Use different offset for check-in
-      name: item.name,
-      sku: item.sku,
-      category: item.category,
-      current_quantity: item.available_quantity,
-      type: 'item'
-    }));
 
     // Search fridges (note: table is 'fridges')
     const fridges = db.prepare(`
@@ -1780,7 +1691,7 @@ app.get('/api/checkins/search', (req, res) => {
       LIMIT 25
     `).all(searchPattern, searchPattern);
 
-    res.json([...itemsWithId, ...fridges]);
+    res.json([...items, ...fridges]);
   } catch (error) {
     console.error('Error searching for check-in:', error);
     res.status(500).json({ error: 'Failed to search for check-in' });
@@ -1800,63 +1711,74 @@ app.post('/api/checkins', (req, res) => {
     db.prepare('BEGIN').run();
 
     try {
-      // Create checkin record
-      const checkinResult = db.prepare(`
-        INSERT INTO checkins (checked_in_by, notes)
-        VALUES (?, ?)
-      `).run(checkedInBy || null, notes || null);
-
-      const checkinId = checkinResult.lastInsertRowid;
+      const addedItems = [];
 
       // Process each item
       for (const item of items) {
         if (item.type === 'item') {
-          // Add checkin item
-          db.prepare(`
-            INSERT INTO checkin_items (checkin_id, item_id, quantity)
-            VALUES (?, ?, ?)
-          `).run(checkinId, item.itemId, item.quantity);
+          // Get item name from the item
+          const itemName = item.name || item.item_name;
+          const quantity = item.quantity || 1;
 
-          // Update inventory quantity
-          db.prepare(`
-            UPDATE inventory_items
-            SET available_quantity = available_quantity + ?,
-                current_quantity = current_quantity + ?
-            WHERE id = ?
-          `).run(item.quantity, item.quantity, item.itemId);
+          if (!itemName) {
+            throw new Error('Item name is required');
+          }
+
+          // Check if item exists in inventory
+          const existing = db.prepare('SELECT * FROM inventory WHERE item_name = ?').get(itemName);
+
+          if (existing) {
+            // Update existing inventory item
+            const newQuantity = existing.quantity + quantity;
+            db.prepare(`
+              UPDATE inventory
+              SET quantity = ?
+              WHERE item_name = ?
+            `).run(newQuantity, itemName);
+
+            addedItems.push({ item_name: itemName, quantity: newQuantity, action: 'updated' });
+          } else {
+            // Insert new inventory item
+            db.prepare(`
+              INSERT INTO inventory (item_name, quantity, description)
+              VALUES (?, ?, ?)
+            `).run(itemName, quantity, item.description || null);
+
+            addedItems.push({ item_name: itemName, quantity: quantity, action: 'created' });
+          }
 
         } else if (item.type === 'fridge') {
           // For fridges, check if this is a return or new fridge
           const existingFridge = db.prepare('SELECT id, fridge_number FROM fridges WHERE id = ?').get(item.fridgeId);
 
           if (existingFridge) {
-            // Returning an existing fridge
-            db.prepare(`
-              INSERT INTO checkin_items (checkin_id, fridge_id, quantity)
-              VALUES (?, ?, 1)
-            `).run(checkinId, item.fridgeId);
-
-            // Update fridge status to available
+            // Returning an existing fridge - update status to available
             db.prepare(`
               UPDATE fridges
               SET status = 'available'
               WHERE id = ?
             `).run(item.fridgeId);
+
+            addedItems.push({
+              type: 'fridge',
+              fridge_number: existingFridge.fridge_number,
+              action: 'returned'
+            });
           } else {
             // New fridge being checked in - auto-generate fridge number
             const maxNumber = db.prepare('SELECT MAX(CAST(fridge_number AS INTEGER)) as max FROM fridges').get().max || 0;
             const newFridgeNumber = String(maxNumber + 1);
 
-            const fridgeResult = db.prepare(`
+            db.prepare(`
               INSERT INTO fridges (fridge_number, has_freezer, brand, status, condition)
               VALUES (?, ?, ?, 'available', 'Good')
             `).run(newFridgeNumber, item.hasFreezer ? 1 : 0, item.brand || 'Unknown');
 
-            // Add checkin item
-            db.prepare(`
-              INSERT INTO checkin_items (checkin_id, fridge_id, quantity)
-              VALUES (?, ?, 1)
-            `).run(checkinId, fridgeResult.lastInsertRowid);
+            addedItems.push({
+              type: 'fridge',
+              fridge_number: newFridgeNumber,
+              action: 'created'
+            });
           }
         }
       }
@@ -1865,8 +1787,8 @@ app.post('/api/checkins', (req, res) => {
 
       res.json({
         success: true,
-        checkinId,
-        message: 'Items checked in successfully'
+        items: addedItems,
+        message: `Successfully checked in ${addedItems.length} item(s) to inventory`
       });
 
     } catch (error) {
@@ -1876,6 +1798,262 @@ app.post('/api/checkins', (req, res) => {
   } catch (error) {
     console.error('Error creating checkin:', error);
     res.status(500).json({ error: 'Failed to create checkin' });
+  }
+});
+
+// ============================================
+// INVENTORY ENDPOINTS
+// ============================================
+
+// Get all inventory items
+app.get('/api/inventory', (req, res) => {
+  try {
+    const { search = '' } = req.query;
+
+    let query = `
+      SELECT *
+      FROM inventory
+      ORDER BY item_name ASC
+    `;
+
+    let items = db.prepare(query).all();
+
+    // Apply search filter if provided
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      items = items.filter(item =>
+        item.item_name?.toLowerCase().includes(searchLower) ||
+        item.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    res.status(500).json({ error: 'Failed to fetch inventory' });
+  }
+});
+
+// Add or update inventory item
+app.post('/api/inventory', (req, res) => {
+  try {
+    const { item_name, name, quantity, description, category } = req.body;
+
+    // Accept both item_name and name for compatibility
+    const itemName = item_name || name;
+    const itemCategory = category || 'Other';
+
+    if (!itemName || quantity === undefined) {
+      return res.status(400).json({ error: 'item_name (or name) and quantity are required' });
+    }
+
+    // Check if item already exists
+    const existing = db.prepare('SELECT * FROM inventory WHERE item_name = ?').get(itemName);
+
+    if (existing) {
+      // Update existing item - add to quantity
+      const newQuantity = existing.quantity + quantity;
+      const stmt = db.prepare(`
+        UPDATE inventory
+        SET quantity = ?, description = COALESCE(?, description), category = COALESCE(?, category)
+        WHERE item_name = ?
+      `);
+      stmt.run(newQuantity, description, itemCategory, itemName);
+
+      const updated = db.prepare('SELECT * FROM inventory WHERE item_name = ?').get(itemName);
+      res.json({ message: 'Inventory updated', item: updated });
+    } else {
+      // Insert new item
+      const stmt = db.prepare(`
+        INSERT INTO inventory (item_name, quantity, description, category)
+        VALUES (?, ?, ?, ?)
+      `);
+      const result = stmt.run(itemName, quantity, description, itemCategory);
+
+      const newItem = db.prepare('SELECT * FROM inventory WHERE id = ?').get(result.lastInsertRowid);
+      res.json({ message: 'Item added to inventory', item: newItem });
+    }
+  } catch (error) {
+    console.error('Error adding/updating inventory:', error);
+    res.status(500).json({ error: 'Failed to add/update inventory' });
+  }
+});
+
+// Update inventory item quantity
+app.patch('/api/inventory/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, description } = req.body;
+
+    const updates = [];
+    const params = [];
+
+    if (quantity !== undefined) {
+      updates.push('quantity = ?');
+      params.push(quantity);
+    }
+
+    if (description !== undefined) {
+      updates.push('description = ?');
+      params.push(description);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(id);
+
+    const stmt = db.prepare(`
+      UPDATE inventory
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `);
+    stmt.run(...params);
+
+    const updated = db.prepare('SELECT * FROM inventory WHERE id = ?').get(id);
+    res.json({ message: 'Inventory item updated', item: updated });
+  } catch (error) {
+    console.error('Error updating inventory:', error);
+    res.status(500).json({ error: 'Failed to update inventory' });
+  }
+});
+
+// Delete inventory item
+app.delete('/api/inventory/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const stmt = db.prepare('DELETE FROM inventory WHERE id = ?');
+    const result = stmt.run(id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    res.json({ message: 'Item deleted from inventory' });
+  } catch (error) {
+    console.error('Error deleting inventory:', error);
+    res.status(500).json({ error: 'Failed to delete inventory item' });
+  }
+});
+
+// ============================================
+// Item Variants Endpoints
+// ============================================
+
+// Get all variants for an inventory item
+app.get('/api/inventory/:id/variants', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const variants = db.prepare(`
+      SELECT * FROM item_variants
+      WHERE inventory_id = ?
+      ORDER BY variant_description ASC
+    `).all(id);
+
+    res.json(variants);
+  } catch (error) {
+    console.error('Error fetching variants:', error);
+    res.status(500).json({ error: 'Failed to fetch variants' });
+  }
+});
+
+// Add or update a variant for an item
+app.post('/api/inventory/:id/variants', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { variant_description, quantity = 0 } = req.body;
+
+    if (!variant_description || !variant_description.trim()) {
+      return res.status(400).json({ error: 'variant_description is required' });
+    }
+
+    const existing = db.prepare(`
+      SELECT * FROM item_variants
+      WHERE inventory_id = ? AND variant_description = ?
+    `).get(id, variant_description);
+
+    if (existing) {
+      // Update quantity
+      const newQuantity = existing.quantity + quantity;
+      db.prepare(`
+        UPDATE item_variants
+        SET quantity = ?
+        WHERE id = ?
+      `).run(newQuantity, existing.id);
+
+      const updated = db.prepare('SELECT * FROM item_variants WHERE id = ?').get(existing.id);
+      res.json({ message: 'Variant updated', variant: updated });
+    } else {
+      // Insert new variant
+      const stmt = db.prepare(`
+        INSERT INTO item_variants (inventory_id, variant_description, quantity)
+        VALUES (?, ?, ?)
+      `);
+      const result = stmt.run(id, variant_description, quantity);
+
+      const newVariant = db.prepare('SELECT * FROM item_variants WHERE id = ?').get(result.lastInsertRowid);
+      res.json({ message: 'Variant added', variant: newVariant });
+    }
+  } catch (error) {
+    console.error('Error adding/updating variant:', error);
+    res.status(500).json({ error: 'Failed to add/update variant' });
+  }
+});
+
+// Update a specific variant
+app.patch('/api/variants/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, variant_description } = req.body;
+
+    const updates = [];
+    const params = [];
+
+    if (quantity !== undefined) {
+      updates.push('quantity = ?');
+      params.push(quantity);
+    }
+
+    if (variant_description !== undefined) {
+      updates.push('variant_description = ?');
+      params.push(variant_description);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(id);
+    const stmt = db.prepare(`UPDATE item_variants SET ${updates.join(', ')} WHERE id = ?`);
+    stmt.run(...params);
+
+    const updated = db.prepare('SELECT * FROM item_variants WHERE id = ?').get(id);
+    res.json({ message: 'Variant updated', variant: updated });
+  } catch (error) {
+    console.error('Error updating variant:', error);
+    res.status(500).json({ error: 'Failed to update variant' });
+  }
+});
+
+// Delete a variant
+app.delete('/api/variants/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const stmt = db.prepare('DELETE FROM item_variants WHERE id = ?');
+    const result = stmt.run(id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Variant not found' });
+    }
+
+    res.json({ message: 'Variant deleted' });
+  } catch (error) {
+    console.error('Error deleting variant:', error);
+    res.status(500).json({ error: 'Failed to delete variant' });
   }
 });
 
@@ -1898,7 +2076,11 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/verification/checkouts    - Get grouped checkouts for verification`);
   console.log(`   PATCH /api/verification/checkouts/:checkoutId - Update checkout verification status`);
   console.log(`   GET  /api/analytics/top-items       - Get top items (optional ?year=)`);
-  console.log(`   GET  /api/items/search              - Search items (required ?query=)\n`);
+  console.log(`   GET  /api/items/search              - Search items (required ?query=)`);
+  console.log(`   GET  /api/inventory                 - Get all inventory items (optional ?search=)`);
+  console.log(`   POST /api/inventory                 - Add or update inventory item`);
+  console.log(`   PATCH /api/inventory/:id            - Update inventory item`);
+  console.log(`   DELETE /api/inventory/:id           - Delete inventory item\n`);
 });
 
 // Graceful shutdown

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Database, ChevronUp, ChevronDown, RefreshCw, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Search, Database, ChevronUp, ChevronDown, RefreshCw, CheckCircle, Clock, XCircle, Package, Users } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 function DatabaseViewer() {
+  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'inventory'
+
+  // User Database States
   const [checkouts, setCheckouts] = useState([]);
   const [filteredCheckouts, setFilteredCheckouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,12 +19,24 @@ function DatabaseViewer() {
   const [availableYears, setAvailableYears] = useState([]);
   const [selectedCheckout, setSelectedCheckout] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(100);
+  const [itemsPerPage] = useState(50);
 
-  // Fetch all checkouts with items
+  // Inventory Database States
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [filteredInventory, setFilteredInventory] = useState([]);
+  const [inventorySearchQuery, setInventorySearchQuery] = useState('');
+  const [inventorySortConfig, setInventorySortConfig] = useState({ key: 'item_name', direction: 'asc' });
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [inventoryPerPage] = useState(50);
+
+  // Fetch data based on active tab
   useEffect(() => {
-    fetchCheckouts();
-  }, []);
+    if (activeTab === 'users') {
+      fetchCheckouts();
+    } else {
+      fetchInventory();
+    }
+  }, [activeTab]);
 
   const fetchCheckouts = async () => {
     setIsLoading(true);
@@ -47,7 +62,58 @@ function DatabaseViewer() {
     }
   };
 
-  // Handle search and year filter
+  const fetchInventory = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/inventory`);
+      const items = response.data || [];
+
+      // Fetch variants for each item and expand into separate rows
+      const expandedItems = [];
+
+      for (const item of items) {
+        try {
+          const variantsResponse = await axios.get(`${API_URL}/inventory/${item.id}/variants`);
+          const variants = variantsResponse.data || [];
+
+          if (variants.length > 0) {
+            // If item has variants, show each variant as a separate row
+            variants.forEach(variant => {
+              expandedItems.push({
+                id: `${item.id}-v${variant.id}`,
+                item_name: `${item.item_name} - ${variant.variant_description}`,
+                quantity: variant.quantity,
+                category: item.category,
+                description: variant.variant_description,
+                last_updated: variant.last_updated,
+                isVariant: true,
+                parentId: item.id,
+                variantId: variant.id
+              });
+            });
+          } else {
+            // No variants, show the main item
+            expandedItems.push(item);
+          }
+        } catch (error) {
+          // If error fetching variants, just show the main item
+          expandedItems.push(item);
+        }
+      }
+
+      setInventoryItems(expandedItems);
+      setFilteredInventory(expandedItems);
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      toast.error('Failed to load inventory');
+      setInventoryItems([]);
+      setFilteredInventory([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle search and year filter for checkouts
   useEffect(() => {
     let filtered = [...checkouts];
 
@@ -80,6 +146,49 @@ function DatabaseViewer() {
     setFilteredCheckouts(filtered);
     setCurrentPage(1); // Reset to first page when filters change
   }, [searchQuery, selectedYear, checkouts]);
+
+  // Handle search filter and sorting for inventory
+  useEffect(() => {
+    let filtered = [...inventoryItems];
+
+    if (inventorySearchQuery.trim()) {
+      const query = inventorySearchQuery.toLowerCase();
+      filtered = filtered.filter(item =>
+        item.item_name?.toLowerCase().includes(query) ||
+        item.category?.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue = a[inventorySortConfig.key];
+      let bValue = b[inventorySortConfig.key];
+
+      // Handle different data types
+      if (inventorySortConfig.key === 'quantity') {
+        aValue = parseInt(aValue) || 0;
+        bValue = parseInt(bValue) || 0;
+      } else if (inventorySortConfig.key === 'last_updated') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      } else {
+        // String comparison (case-insensitive)
+        aValue = (aValue || '').toString().toLowerCase();
+        bValue = (bValue || '').toString().toLowerCase();
+      }
+
+      if (aValue < bValue) {
+        return inventorySortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return inventorySortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    setFilteredInventory(filtered);
+  }, [inventorySearchQuery, inventoryItems, inventorySortConfig]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredCheckouts.length / itemsPerPage);
@@ -135,11 +244,21 @@ function DatabaseViewer() {
     setFilteredCheckouts(sorted);
   };
 
-  const SortIcon = ({ columnKey }) => {
-    if (sortConfig.key !== columnKey) {
+  // Handle sorting for inventory
+  const handleInventorySort = (key) => {
+    let direction = 'asc';
+    if (inventorySortConfig.key === key && inventorySortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setInventorySortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey, isInventory = false }) => {
+    const currentSortConfig = isInventory ? inventorySortConfig : sortConfig;
+    if (currentSortConfig.key !== columnKey) {
       return <ChevronUp className="w-4 h-4 text-gray-400" />;
     }
-    return sortConfig.direction === 'asc' ? (
+    return currentSortConfig.direction === 'asc' ? (
       <ChevronUp className="w-4 h-4 text-eco-primary-600" />
     ) : (
       <ChevronDown className="w-4 h-4 text-eco-primary-600" />
@@ -216,7 +335,7 @@ function DatabaseViewer() {
               Database Viewer
             </h1>
             <button
-              onClick={fetchCheckouts}
+              onClick={activeTab === 'users' ? fetchCheckouts : fetchInventory}
               disabled={isLoading}
               className="ml-4 p-2 rounded-lg bg-eco-primary-600 text-white hover:bg-eco-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Refresh data"
@@ -225,54 +344,83 @@ function DatabaseViewer() {
             </button>
           </div>
           <p className="text-gray-600 text-lg">
-            View and search all checkout records
+            {activeTab === 'users' ? 'View and search all checkout records' : 'View and manage inventory stock'}
           </p>
         </div>
 
-        <div className="mb-6">
-          <div className="relative mb-4">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by name, email, housing, items, or any field..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-eco-primary-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Year Tabs */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              onClick={() => setSelectedYear('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedYear === 'all'
-                  ? 'bg-eco-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              All Years
-            </button>
-            {availableYears.map(year => (
-              <button
-                key={year}
-                onClick={() => setSelectedYear(year)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  selectedYear === year
-                    ? 'bg-eco-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {year}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-sm text-gray-500">
-            Showing {filteredCheckouts.length} of {checkouts.length} records
-            {selectedYear !== 'all' && ` (${selectedYear})`}
-          </p>
+        {/* Tab Navigation */}
+        <div className="flex justify-center gap-4 mb-6">
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'users'
+                ? 'bg-eco-primary-600 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Users className="w-5 h-5" />
+            User Database
+          </button>
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'inventory'
+                ? 'bg-eco-primary-600 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Package className="w-5 h-5" />
+            Inventory Database
+          </button>
         </div>
+
+        {/* User Database View */}
+        {activeTab === 'users' && (
+          <>
+            <div className="mb-6">
+              <div className="relative mb-4">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, housing, items, or any field..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-eco-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Year Tabs */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => setSelectedYear('all')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    selectedYear === 'all'
+                      ? 'bg-eco-primary-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  All Years
+                </button>
+                {availableYears.map(year => (
+                  <button
+                    key={year}
+                    onClick={() => setSelectedYear(year)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      selectedYear === year
+                        ? 'bg-eco-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {year}
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-sm text-gray-500">
+                Showing {filteredCheckouts.length} of {checkouts.length} records
+                {selectedYear !== 'all' && ` (${selectedYear})`}
+              </p>
+            </div>
 
         {isLoading ? (
           <div className="flex justify-center py-12">
@@ -588,152 +736,414 @@ function DatabaseViewer() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
             onClick={closeModal}
           >
-            <div
-              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="bg-eco-primary-600 text-white px-6 py-4 rounded-t-lg">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">Checkout Details</h2>
-                  <button
-                    onClick={closeModal}
-                    className="text-white hover:text-gray-200 text-2xl font-bold"
-                  >
-                    ×
-                  </button>
+                <div
+                  className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Modal Header */}
+                  <div className="bg-eco-primary-600 text-white px-6 py-4 rounded-t-lg">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-2xl font-bold">Checkout Details</h2>
+                      <button
+                        onClick={closeModal}
+                        className="text-white hover:text-gray-200 text-2xl font-bold"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-6">
+                    {/* Checkout Information */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-eco-primary-800 mb-3">Donor Information</h3>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-sm text-gray-600">Checkout ID:</label>
+                            <p className="font-medium">{selectedCheckout.id}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-600">Name:</label>
+                            <p className="font-medium">{selectedCheckout.owner_name}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-600">Email:</label>
+                            <p className="font-medium">{selectedCheckout.email}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-600">Housing:</label>
+                            <p className="font-medium">{selectedCheckout.housing_assignment || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-600">Graduation Year:</label>
+                            <p className="font-medium">{selectedCheckout.graduation_year || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-lg font-semibold text-eco-primary-800 mb-3">Checkout Information</h3>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-sm text-gray-600">Date:</label>
+                            <p className="font-medium">{new Date(selectedCheckout.date).toLocaleDateString()}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-600">Year Range:</label>
+                            <p className="font-medium">{selectedCheckout.year_range}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-600">Total Items:</label>
+                            <p className="font-medium">{selectedCheckout.items?.length || 0}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Items List */}
+                    <div className="mt-6">
+                      <h3 className="text-lg font-semibold text-eco-primary-800 mb-3">Items Checked Out</h3>
+
+                      {/* General Items */}
+                      {(() => {
+                        const { generalItems, fridgeItems } = categorizeItems(selectedCheckout.items);
+                        return (
+                          <>
+                            {generalItems.length > 0 && (
+                              <div className="mb-4">
+                                <h4 className="font-semibold text-eco-primary-600 mb-2">General Items ({generalItems.length})</h4>
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                  <div className="space-y-2">
+                                    {generalItems.map((item) => (
+                                      <div key={item.id} className="flex justify-between items-center border-b border-gray-200 pb-2">
+                                        <div>
+                                          <p className="font-medium">{item.item_name}</p>
+                                          {item.description && (
+                                            <p className="text-sm text-gray-600">{item.description}</p>
+                                          )}
+                                        </div>
+                                        <span className="text-sm font-semibold text-eco-primary-600">
+                                          Qty: {item.item_quantity}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Fridge Items */}
+                            {fridgeItems.length > 0 && (
+                              <div>
+                                <h4 className="font-semibold text-eco-teal-600 mb-2">Fridge Items ({fridgeItems.length})</h4>
+                                <div className="bg-eco-teal-50 rounded-lg p-4">
+                                  <div className="space-y-2">
+                                    {fridgeItems.map((item) => (
+                                      <div key={item.id} className="flex justify-between items-center border-b border-eco-teal-200 pb-2">
+                                        <div>
+                                          <p className="font-medium">{item.item_name}</p>
+                                          {item.fridge_company && (
+                                            <p className="text-sm font-semibold text-eco-teal-700">
+                                              Company: {item.fridge_company}
+                                            </p>
+                                          )}
+                                          {item.fridge_model && (
+                                            <p className="text-sm text-gray-600">Model: {item.fridge_model}</p>
+                                          )}
+                                          {item.fridge_size && (
+                                            <p className="text-sm text-gray-600">Size: {item.fridge_size}</p>
+                                          )}
+                                          {item.fridge_condition && (
+                                            <p className="text-sm text-gray-600">Condition: {item.fridge_condition}</p>
+                                          )}
+                                          {item.description && (
+                                            <p className="text-sm text-gray-600">{item.description}</p>
+                                          )}
+                                        </div>
+                                        <span className="text-sm font-semibold text-eco-teal-600">
+                                          Qty: {item.item_quantity}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {generalItems.length === 0 && fridgeItems.length === 0 && (
+                              <p className="text-gray-500 text-center py-4">No items found</p>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
                 </div>
               </div>
+          )}
+          </>
+        )}
 
-              {/* Modal Body */}
-              <div className="p-6">
-                {/* Checkout Information */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-eco-primary-800 mb-3">Donor Information</h3>
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-sm text-gray-600">Checkout ID:</label>
-                        <p className="font-medium">{selectedCheckout.id}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Name:</label>
-                        <p className="font-medium">{selectedCheckout.owner_name}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Email:</label>
-                        <p className="font-medium">{selectedCheckout.email}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Housing:</label>
-                        <p className="font-medium">{selectedCheckout.housing_assignment || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Graduation Year:</label>
-                        <p className="font-medium">{selectedCheckout.graduation_year || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-eco-primary-800 mb-3">Checkout Information</h3>
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-sm text-gray-600">Date:</label>
-                        <p className="font-medium">{new Date(selectedCheckout.date).toLocaleDateString()}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Year Range:</label>
-                        <p className="font-medium">{selectedCheckout.year_range}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Total Items:</label>
-                        <p className="font-medium">{selectedCheckout.items?.length || 0}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items List */}
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-eco-primary-800 mb-3">Items Checked Out</h3>
-
-                  {/* General Items */}
-                  {(() => {
-                    const { generalItems, fridgeItems } = categorizeItems(selectedCheckout.items);
-                    return (
-                      <>
-                        {generalItems.length > 0 && (
-                          <div className="mb-4">
-                            <h4 className="font-semibold text-eco-primary-600 mb-2">General Items ({generalItems.length})</h4>
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <div className="space-y-2">
-                                {generalItems.map((item) => (
-                                  <div key={item.id} className="flex justify-between items-center border-b border-gray-200 pb-2">
-                                    <div>
-                                      <p className="font-medium">{item.item_name}</p>
-                                      {item.description && (
-                                        <p className="text-sm text-gray-600">{item.description}</p>
-                                      )}
-                                    </div>
-                                    <span className="text-sm font-semibold text-eco-primary-600">
-                                      Qty: {item.item_quantity}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Fridge Items */}
-                        {fridgeItems.length > 0 && (
-                          <div>
-                            <h4 className="font-semibold text-eco-teal-600 mb-2">Fridge Items ({fridgeItems.length})</h4>
-                            <div className="bg-eco-teal-50 rounded-lg p-4">
-                              <div className="space-y-2">
-                                {fridgeItems.map((item) => (
-                                  <div key={item.id} className="flex justify-between items-center border-b border-eco-teal-200 pb-2">
-                                    <div>
-                                      <p className="font-medium">{item.item_name}</p>
-                                      {item.fridge_company && (
-                                        <p className="text-sm font-semibold text-eco-teal-700">
-                                          Company: {item.fridge_company}
-                                        </p>
-                                      )}
-                                      {item.fridge_model && (
-                                        <p className="text-sm text-gray-600">Model: {item.fridge_model}</p>
-                                      )}
-                                      {item.fridge_size && (
-                                        <p className="text-sm text-gray-600">Size: {item.fridge_size}</p>
-                                      )}
-                                      {item.fridge_condition && (
-                                        <p className="text-sm text-gray-600">Condition: {item.fridge_condition}</p>
-                                      )}
-                                      {item.description && (
-                                        <p className="text-sm text-gray-600">{item.description}</p>
-                                      )}
-                                    </div>
-                                    <span className="text-sm font-semibold text-eco-teal-600">
-                                      Qty: {item.item_quantity}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {generalItems.length === 0 && fridgeItems.length === 0 && (
-                          <p className="text-gray-500 text-center py-4">No items found</p>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
+        {/* Inventory Database View */}
+        {activeTab === 'inventory' && (
+          <>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="card text-center bg-gradient-to-br from-eco-primary-50 to-white">
+                <Package className="w-10 h-10 text-eco-primary-600 mx-auto mb-2" />
+                <p className="text-3xl font-bold text-eco-primary-800">{inventoryItems.length}</p>
+                <p className="text-sm text-gray-600">Total Items</p>
+              </div>
+              <div className="card text-center bg-gradient-to-br from-green-50 to-white">
+                <CheckCircle className="w-10 h-10 text-green-600 mx-auto mb-2" />
+                <p className="text-3xl font-bold text-green-700">
+                  {inventoryItems.filter(item => item.quantity > 0).length}
+                </p>
+                <p className="text-sm text-gray-600">In Stock</p>
+              </div>
+              <div className="card text-center bg-gradient-to-br from-yellow-50 to-white">
+                <Clock className="w-10 h-10 text-yellow-600 mx-auto mb-2" />
+                <p className="text-3xl font-bold text-yellow-700">
+                  {inventoryItems.filter(item => item.quantity > 0 && item.quantity < 5).length}
+                </p>
+                <p className="text-sm text-gray-600">Low Stock</p>
               </div>
             </div>
-          </div>
+
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative mb-4">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search inventory by item name, category..."
+                  value={inventorySearchQuery}
+                  onChange={(e) => {
+                    setInventorySearchQuery(e.target.value);
+                    setInventoryPage(1); // Reset to first page on search
+                  }}
+                  className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-eco-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-500">
+                  Showing {Math.min((inventoryPage - 1) * inventoryPerPage + 1, filteredInventory.length)}-{Math.min(inventoryPage * inventoryPerPage, filteredInventory.length)} of {filteredInventory.length} items
+                </p>
+                <button
+                  onClick={() => {
+                    fetchInventory();
+                    setInventoryPage(1);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-eco-primary-600 hover:text-eco-primary-700 font-medium transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
+            ) : filteredInventory.length === 0 ? (
+              <div className="card text-center py-12">
+                <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  No Inventory Items
+                </h2>
+                <p className="text-gray-600">
+                  {inventorySearchQuery ? 'No items match your search' : 'Inventory is empty'}
+                </p>
+              </div>
+            ) : (
+              <div className="card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th
+                          onClick={() => handleInventorySort('item_name')}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                        >
+                          <div className="flex items-center gap-2">
+                            Item Name
+                            <SortIcon columnKey="item_name" isInventory={true} />
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleInventorySort('category')}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                        >
+                          <div className="flex items-center gap-2">
+                            Category
+                            <SortIcon columnKey="category" isInventory={true} />
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleInventorySort('quantity')}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                        >
+                          <div className="flex items-center gap-2">
+                            Quantity
+                            <SortIcon columnKey="quantity" isInventory={true} />
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleInventorySort('last_updated')}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                        >
+                          <div className="flex items-center gap-2">
+                            Last Updated
+                            <SortIcon columnKey="last_updated" isInventory={true} />
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {(() => {
+                        const startIdx = (inventoryPage - 1) * inventoryPerPage;
+                        const endIdx = startIdx + inventoryPerPage;
+                        const paginatedItems = filteredInventory.slice(startIdx, endIdx);
+
+                        return paginatedItems.map((item) => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                              {item.item_name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {item.category || '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className={`font-semibold ${
+                                item.quantity === 0 ? 'text-red-600' :
+                                item.quantity < 5 ? 'text-yellow-600' :
+                                'text-green-600'
+                              }`}>
+                                {item.quantity}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(item.last_updated).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Controls */}
+                {(() => {
+                  const totalPages = Math.ceil(filteredInventory.length / inventoryPerPage);
+
+                  if (totalPages <= 1) return null;
+
+                  return (
+                    <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 sm:px-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                          <button
+                            onClick={() => setInventoryPage(Math.max(1, inventoryPage - 1))}
+                            disabled={inventoryPage === 1}
+                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Previous
+                          </button>
+                          <button
+                            onClick={() => setInventoryPage(Math.min(totalPages, inventoryPage + 1))}
+                            disabled={inventoryPage === totalPages}
+                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Next
+                          </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm text-gray-700">
+                              Page <span className="font-medium">{inventoryPage}</span> of{' '}
+                              <span className="font-medium">{totalPages}</span>
+                            </p>
+                          </div>
+                          <div>
+                            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                              <button
+                                onClick={() => setInventoryPage(1)}
+                                disabled={inventoryPage === 1}
+                                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span className="sr-only">First</span>
+                                <ChevronDown className="h-5 w-5 rotate-90" />
+                                <ChevronDown className="h-5 w-5 rotate-90 -ml-3" />
+                              </button>
+                              <button
+                                onClick={() => setInventoryPage(Math.max(1, inventoryPage - 1))}
+                                disabled={inventoryPage === 1}
+                                className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span className="sr-only">Previous</span>
+                                <ChevronDown className="h-5 w-5 rotate-90" />
+                              </button>
+
+                              {/* Page Numbers */}
+                              {(() => {
+                                const pages = [];
+                                const showPages = 5;
+                                let startPage = Math.max(1, inventoryPage - Math.floor(showPages / 2));
+                                let endPage = Math.min(totalPages, startPage + showPages - 1);
+
+                                if (endPage - startPage < showPages - 1) {
+                                  startPage = Math.max(1, endPage - showPages + 1);
+                                }
+
+                                for (let i = startPage; i <= endPage; i++) {
+                                  pages.push(
+                                    <button
+                                      key={i}
+                                      onClick={() => setInventoryPage(i)}
+                                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                        i === inventoryPage
+                                          ? 'z-10 bg-eco-primary-50 border-eco-primary-500 text-eco-primary-600'
+                                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      {i}
+                                    </button>
+                                  );
+                                }
+                                return pages;
+                              })()}
+
+                              <button
+                                onClick={() => setInventoryPage(Math.min(totalPages, inventoryPage + 1))}
+                                disabled={inventoryPage === totalPages}
+                                className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span className="sr-only">Next</span>
+                                <ChevronDown className="h-5 w-5 -rotate-90" />
+                              </button>
+                              <button
+                                onClick={() => setInventoryPage(totalPages)}
+                                disabled={inventoryPage === totalPages}
+                                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span className="sr-only">Last</span>
+                                <ChevronDown className="h-5 w-5 -rotate-90" />
+                                <ChevronDown className="h-5 w-5 -rotate-90 -ml-3" />
+                              </button>
+                            </nav>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

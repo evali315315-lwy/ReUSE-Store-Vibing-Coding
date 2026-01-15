@@ -42,8 +42,8 @@ export function searchItems(items, query, selectedCategories = []) {
   // Filter by categories first (if any selected)
   if (selectedCategories && selectedCategories.length > 0) {
     filtered = filtered.filter(item => {
-      if (!item.categories) return false;
-      return selectedCategories.some(cat => item.categories.includes(cat));
+      if (!item.category) return false;
+      return selectedCategories.includes(item.category);
     });
   }
 
