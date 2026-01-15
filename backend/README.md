@@ -111,7 +111,7 @@ The database is located at `database/reuse-store.db` in the project root.
 - fridge_company_id (FOREIGN KEY → fridge_companies)
 - created_at
 
-**fridge_companies**
+**fridge_companies** (Legacy table - 2019-2023 data only)
 - id (PRIMARY KEY)
 - company - Manufacturer/brand name
 - model - Model number
@@ -119,6 +119,7 @@ The database is located at `database/reuse-store.db` in the project root.
 - condition - Condition status
 - notes - Additional notes
 - created_at
+- **Note**: This table is only referenced by 169 legacy items from 2019-2023. New fridge checkouts (2025+) use the consolidated `fridges` table instead.
 
 **fridges** (Consolidated from fridges, fridge_inventory, fridge_checkouts, fridge_maintenance)
 - id (PRIMARY KEY)
