@@ -767,6 +767,8 @@ app.get('/api/students/search', (req, res) => {
     const { q = '', withFridgesOnly = 'false' } = req.query;
 
     let query;
+    const searchPattern = `${q}%`; // Prefix search only
+
     if (withFridgesOnly === 'true') {
       // Only return students with active fridge checkouts
       // Fridge checkouts are identified by items with name like "Fridge #%"
@@ -802,7 +804,7 @@ app.get('/api/students/search', (req, res) => {
       `;
     }
 
-    const students = db.prepare(query).all(`%${q}%`, `%${q}%`);
+    const students = db.prepare(query).all(searchPattern, searchPattern);
     res.json(students);
   } catch (error) {
     console.error('Error searching students:', error);

@@ -6,9 +6,9 @@ function BrandSearch({ value, onChange, brands, onAddNew, required = false }) {
   const [query, setQuery] = useState(value || '');
   const wrapperRef = useRef(null);
 
-  // Filter brands based on search query
+  // Filter brands based on search query - prefix match only (starts with)
   const filteredBrands = brands.filter(brand =>
-    brand.toLowerCase().includes(query.toLowerCase())
+    brand.toLowerCase().startsWith(query.toLowerCase())
   );
 
   // Handle click outside to close dropdown

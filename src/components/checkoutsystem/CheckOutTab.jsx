@@ -40,6 +40,8 @@ function CheckOutTab() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [showItemSearch, setShowItemSearch] = useState(false);
+  const [checkoutPhoto, setCheckoutPhoto] = useState(null);
+  const [checkoutPhotoFile, setCheckoutPhotoFile] = useState(null);
 
   const currentDate = new Date().toLocaleDateString();
 
@@ -55,7 +57,7 @@ function CheckOutTab() {
   const handleItemSelect = (item) => {
     const exists = selectedItems.find(i => i.id === item.id);
     if (!exists) {
-      setSelectedItems([...selectedItems, { ...item, quantity: 1, photo: null }]);
+      setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
       setShowItemSearch(false);
     }
   };
@@ -74,8 +76,8 @@ function CheckOutTab() {
     setSelectedItems(items => items.filter(item => item.id !== itemId));
   };
 
-  // Handle photo upload for an item
-  const handlePhotoUpload = (itemId, file) => {
+  // Handle photo upload for the entire checkout
+  const handlePhotoUpload = (file) => {
     if (!file) return;
 
     // Check file type
@@ -93,11 +95,8 @@ function CheckOutTab() {
     // Convert to base64 for storage
     const reader = new FileReader();
     reader.onloadend = () => {
-      setSelectedItems(items =>
-        items.map(item =>
-          item.id === itemId ? { ...item, photo: reader.result, photoFile: file } : item
-        )
-      );
+      setCheckoutPhoto(reader.result);
+      setCheckoutPhotoFile(file);
       toast.success('Photo uploaded successfully');
     };
     reader.onerror = () => {
@@ -106,13 +105,10 @@ function CheckOutTab() {
     reader.readAsDataURL(file);
   };
 
-  // Remove photo from an item
-  const removePhoto = (itemId) => {
-    setSelectedItems(items =>
-      items.map(item =>
-        item.id === itemId ? { ...item, photo: null, photoFile: null } : item
-      )
-    );
+  // Remove photo
+  const removePhoto = () => {
+    setCheckoutPhoto(null);
+    setCheckoutPhotoFile(null);
   };
 
   // Submit checkout
@@ -122,10 +118,9 @@ function CheckOutTab() {
       return;
     }
 
-    // Check if all items have photos
-    const itemsWithoutPhotos = selectedItems.filter(item => !item.photo);
-    if (itemsWithoutPhotos.length > 0) {
-      toast.error('Please upload a photo for all items');
+    // Check if checkout photo is uploaded
+    if (!checkoutPhoto) {
+      toast.error('Please upload a photo of all checked-out items');
       return;
     }
 
@@ -159,6 +154,8 @@ function CheckOutTab() {
       setValue('gradYear', '');
       setValue('notes', '');
       setSelectedItems([]);
+      setCheckoutPhoto(null);
+      setCheckoutPhotoFile(null);
 
     } catch (error) {
       console.error('Checkout error:', error);
@@ -284,45 +281,12 @@ function CheckOutTab() {
         {selectedItems.length > 0 && (
           <div className="space-y-4">
             {selectedItems.map(item => (
-              <div key={item.id} className={`p-4 rounded-lg border-2 ${!item.photo ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+              <div key={item.id} className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50">
                 <div className="flex items-start gap-4">
                   {/* Item Details */}
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">{item.name}</p>
                     <p className="text-sm text-gray-600">SKU: {item.sku} • Max: {item.available_quantity}</p>
-
-                    {/* Photo Upload Section */}
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Photo <span className="text-red-500">*</span>
-                      </label>
-                      {!item.photo ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handlePhotoUpload(item.id, e.target.files[0])}
-                            className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                          />
-                          <span className="text-xs text-red-600">Required</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={item.photo}
-                            alt="Item"
-                            className="w-20 h-20 object-cover rounded border-2 border-gray-300"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removePhoto(item.id)}
-                            className="text-sm text-red-600 hover:text-red-800"
-                          >
-                            Remove Photo
-                          </button>
-                        </div>
-                      )}
-                    </div>
                   </div>
 
                   {/* Quantity Input */}
@@ -352,6 +316,46 @@ function CheckOutTab() {
           </div>
         )}
       </div>
+
+      {/* Checkout Photo Section - After Items List */}
+      {selectedItems.length > 0 && (
+        <div className={`bg-white p-6 rounded-lg shadow-sm border-2 ${!checkoutPhoto ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Checkout Photo <span className="text-red-500">*</span>
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Take a photo of ALL items being checked out together. This serves as a visual record of what the student is borrowing.
+          </p>
+
+          {!checkoutPhoto ? (
+            <div className="flex flex-col items-center gap-3 p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+              <Camera className="w-12 h-12 text-gray-400" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handlePhotoUpload(e.target.files[0])}
+                className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <span className="text-xs text-red-600 font-medium">Photo required before checkout</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <img
+                src={checkoutPhoto}
+                alt="Checkout items"
+                className="w-full max-w-md rounded border-2 border-gray-300"
+              />
+              <button
+                type="button"
+                onClick={removePhoto}
+                className="text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                Remove Photo
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Notes */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
