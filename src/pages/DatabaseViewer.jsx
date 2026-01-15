@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Database, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Database, ChevronUp, ChevronDown, RefreshCw, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
@@ -15,6 +15,8 @@ function DatabaseViewer() {
   const [selectedYear, setSelectedYear] = useState('all');
   const [availableYears, setAvailableYears] = useState([]);
   const [selectedCheckout, setSelectedCheckout] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(100);
 
   // Fetch all checkouts with items
   useEffect(() => {
@@ -76,7 +78,27 @@ function DatabaseViewer() {
     }
 
     setFilteredCheckouts(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [searchQuery, selectedYear, checkouts]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredCheckouts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentCheckouts = filteredCheckouts.slice(startIndex, endIndex);
+
+  // Pagination handlers
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const goToFirstPage = () => goToPage(1);
+  const goToLastPage = () => goToPage(totalPages);
+  const goToPreviousPage = () => goToPage(currentPage - 1);
+  const goToNextPage = () => goToPage(currentPage + 1);
 
   // Handle sorting
   const handleSort = (key) => {
@@ -159,6 +181,22 @@ function DatabaseViewer() {
     };
   };
 
+  // Get verification status of checkout
+  const getVerificationStatus = (checkout) => {
+    if (!checkout.items || checkout.items.length === 0) return 'pending';
+
+    const statuses = checkout.items.map(item => item.verification_status);
+
+    // If any item is flagged, the whole checkout is flagged
+    if (statuses.includes('flagged')) return 'flagged';
+
+    // If all items are approved, checkout is approved
+    if (statuses.every(status => status === 'approved')) return 'approved';
+
+    // Otherwise it's pending
+    return 'pending';
+  };
+
   // Handle row click to view details
   const handleRowClick = (checkout) => {
     setSelectedCheckout(checkout);
@@ -177,6 +215,14 @@ function DatabaseViewer() {
             <h1 className="text-4xl font-bold text-eco-primary-800">
               Database Viewer
             </h1>
+            <button
+              onClick={fetchCheckouts}
+              disabled={isLoading}
+              className="ml-4 p-2 rounded-lg bg-eco-primary-600 text-white hover:bg-eco-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh data"
+            >
+              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
           <p className="text-gray-600 text-lg">
             View and search all checkout records
@@ -244,6 +290,80 @@ function DatabaseViewer() {
           </div>
         ) : (
           <div className="card overflow-hidden">
+            {/* Pagination Controls - Top */}
+            {filteredCheckouts.length > 0 && (
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min(endIndex, filteredCheckouts.length)}</span> of{' '}
+                    <span className="font-medium">{filteredCheckouts.length}</span> results
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={goToFirstPage}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      First
+                    </button>
+                    <button
+                      onClick={goToPreviousPage}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Previous
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {/* Page numbers */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => goToPage(pageNum)}
+                            className={`px-3 py-1 border rounded text-sm ${
+                              currentPage === pageNum
+                                ? 'bg-eco-primary-600 text-white border-eco-primary-600'
+                                : 'border-gray-300 hover:bg-gray-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Next
+                    </button>
+                    <button
+                      onClick={goToLastPage}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -317,11 +437,15 @@ function DatabaseViewer() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Fridge Items
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredCheckouts.map((checkout) => {
+                  {currentCheckouts.map((checkout) => {
                     const { generalCount, fridgeCount } = getItemCounts(checkout);
+                    const status = getVerificationStatus(checkout);
                     return (
                       <tr
                         key={checkout.id}
@@ -355,12 +479,106 @@ function DatabaseViewer() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-eco-teal-600">
                           {fridgeCount}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {status === 'approved' && (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <CheckCircle size={18} />
+                              <span className="font-medium">Approved</span>
+                            </div>
+                          )}
+                          {status === 'pending' && (
+                            <div className="flex items-center gap-1 text-yellow-600">
+                              <Clock size={18} />
+                              <span className="font-medium">Pending</span>
+                            </div>
+                          )}
+                          {status === 'flagged' && (
+                            <div className="flex items-center gap-1 text-red-600">
+                              <XCircle size={18} />
+                              <span className="font-medium">Flagged</span>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredCheckouts.length > 0 && (
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min(endIndex, filteredCheckouts.length)}</span> of{' '}
+                    <span className="font-medium">{filteredCheckouts.length}</span> results
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={goToFirstPage}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      First
+                    </button>
+                    <button
+                      onClick={goToPreviousPage}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Previous
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {/* Page numbers */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => goToPage(pageNum)}
+                            className={`px-3 py-1 border rounded text-sm ${
+                              currentPage === pageNum
+                                ? 'bg-eco-primary-600 text-white border-eco-primary-600'
+                                : 'border-gray-300 hover:bg-gray-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Next
+                    </button>
+                    <button
+                      onClick={goToLastPage}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

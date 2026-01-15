@@ -106,12 +106,9 @@ app.get('/api/checkouts', (req, res) => {
       const items = db.prepare(`
         SELECT
           items.*,
-          fridges.company as fridge_company,
-          fridges.model as fridge_model,
-          fridges.size as fridge_size,
-          fridges.condition as fridge_condition
+          fridge_companies.company as fridge_company_name
         FROM items
-        LEFT JOIN fridges ON items.fridge_id = fridges.id
+        LEFT JOIN fridge_companies ON items.fridge_company_id = fridge_companies.id
         WHERE items.checkout_id = ?
         ORDER BY items.id
       `).all(checkout.id);
@@ -185,12 +182,9 @@ app.get('/api/verification/checkouts', (req, res) => {
       const allItems = db.prepare(`
         SELECT
           items.*,
-          fridges.company as fridge_company,
-          fridges.model as fridge_model,
-          fridges.size as fridge_size,
-          fridges.condition as fridge_condition
+          fridge_companies.company as fridge_company_name
         FROM items
-        LEFT JOIN fridges ON items.fridge_id = fridges.id
+        LEFT JOIN fridge_companies ON items.fridge_company_id = fridge_companies.id
         WHERE checkout_id IN (${placeholders})
         ORDER BY checkout_id ASC, id ASC
       `).all(...checkoutIds);
@@ -489,6 +483,39 @@ app.get('/api/checkouts/:id', (req, res) => {
   }
 });
 
+// Update checkout information
+app.patch('/api/checkouts/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { owner_name, email, housing_assignment, graduation_year } = req.body;
+
+    // Check if checkout exists
+    const checkout = db.prepare('SELECT * FROM checkouts WHERE id = ?').get(id);
+    if (!checkout) {
+      return res.status(404).json({ error: 'Checkout not found' });
+    }
+
+    // Update checkout
+    const stmt = db.prepare(`
+      UPDATE checkouts
+      SET owner_name = ?,
+          email = ?,
+          housing_assignment = ?,
+          graduation_year = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(owner_name, email, housing_assignment, graduation_year, id);
+
+    // Return updated checkout
+    const updatedCheckout = db.prepare('SELECT * FROM checkouts WHERE id = ?').get(id);
+    res.json(updatedCheckout);
+  } catch (error) {
+    console.error('Error updating checkout:', error);
+    res.status(500).json({ error: 'Failed to update checkout' });
+  }
+});
+
 // Search items
 app.get('/api/items/search', (req, res) => {
   try {
@@ -527,6 +554,38 @@ app.get('/api/items/search', (req, res) => {
   } catch (error) {
     console.error('Error searching items:', error);
     res.status(500).json({ error: 'Failed to search items' });
+  }
+});
+
+// Update item information
+app.patch('/api/items/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { item_name, description, item_quantity } = req.body;
+
+    // Check if item exists
+    const item = db.prepare('SELECT * FROM items WHERE id = ?').get(id);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    // Update item
+    const stmt = db.prepare(`
+      UPDATE items
+      SET item_name = ?,
+          description = ?,
+          item_quantity = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(item_name, description, item_quantity, id);
+
+    // Return updated item
+    const updatedItem = db.prepare('SELECT * FROM items WHERE id = ?').get(id);
+    res.json(updatedItem);
+  } catch (error) {
+    console.error('Error updating item:', error);
+    res.status(500).json({ error: 'Failed to update item' });
   }
 });
 
@@ -711,24 +770,32 @@ app.get('/api/students/search', (req, res) => {
     if (withFridgesOnly === 'true') {
       // Only return students with active fridge checkouts
       query = `
-        SELECT DISTINCT s.id, s.name, s.email, s.housing_assignment, s.graduation_year as gradYear
-        FROM students s
-        JOIN checkouts_out co ON co.student_id = s.id
-        JOIN checkout_items ci ON ci.checkout_id = co.id
-        JOIN fridge_inventory fi ON fi.id = ci.fridge_id
-        WHERE (s.name LIKE ? OR s.email LIKE ?)
-          AND co.status = 'active'
-          AND fi.status = 'checked_out'
-        ORDER BY s.name
+        SELECT DISTINCT
+          c.id,
+          c.owner_name as name,
+          c.email,
+          c.housing_assignment,
+          c.graduation_year as gradYear
+        FROM checkouts c
+        JOIN fridge_checkouts fc ON fc.owner_email = c.email
+        WHERE (c.owner_name LIKE ? OR c.email LIKE ?)
+          AND fc.status = 'checked_out'
+        ORDER BY c.owner_name
         LIMIT 50
       `;
     } else {
-      // Return all students
+      // Return all students from checkouts (distinct by email)
       query = `
-        SELECT id, name, email, housing_assignment, graduation_year as gradYear
-        FROM students
-        WHERE name LIKE ? OR email LIKE ?
-        ORDER BY name
+        SELECT DISTINCT
+          MIN(id) as id,
+          owner_name as name,
+          email,
+          housing_assignment,
+          graduation_year as gradYear
+        FROM checkouts
+        WHERE owner_name LIKE ? OR email LIKE ?
+        GROUP BY email
+        ORDER BY owner_name
         LIMIT 50
       `;
     }
@@ -747,9 +814,11 @@ app.get('/api/students/:email', (req, res) => {
     const { email } = req.params;
 
     const student = db.prepare(`
-      SELECT id, name, email, housing_assignment, graduation_year as gradYear
-      FROM students
+      SELECT id, owner_name as name, email, housing_assignment, graduation_year as gradYear
+      FROM checkouts
       WHERE email = ?
+      ORDER BY id DESC
+      LIMIT 1
     `).get(email);
 
     if (!student) {
