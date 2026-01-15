@@ -1,6 +1,14 @@
+import { useState } from 'react';
 import { ArrowLeft, Edit2 } from 'lucide-react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+import FridgeEditModal from './FridgeEditModal';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const FridgeList = ({ fridges, onBack, onUpdate }) => {
+  const [editingFridge, setEditingFridge] = useState(null);
+
   const statusColors = {
     available: 'bg-green-100 text-green-800',
     checked_out: 'bg-yellow-100 text-yellow-800',
@@ -12,6 +20,18 @@ const FridgeList = ({ fridges, onBack, onUpdate }) => {
     Good: 'text-green-600',
     Fair: 'text-yellow-600',
     'Needs Repair': 'text-red-600'
+  };
+
+  const handleSaveFridge = async (fridgeId, formData) => {
+    try {
+      await axios.patch(`${API_URL}/fridges/${fridgeId}`, formData);
+      toast.success('Fridge updated successfully!');
+      setEditingFridge(null);
+      onUpdate(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating fridge:', error);
+      toast.error('Failed to update fridge');
+    }
   };
 
   return (
@@ -84,6 +104,7 @@ const FridgeList = ({ fridges, onBack, onUpdate }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button
+                    onClick={() => setEditingFridge(fridge)}
                     className="text-eco-primary-600 hover:text-eco-primary-700 flex items-center gap-1"
                     title="Edit fridge"
                   >
@@ -100,6 +121,15 @@ const FridgeList = ({ fridges, onBack, onUpdate }) => {
         <div className="text-center py-8 text-gray-500">
           No fridges in inventory. Add fridges to get started.
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingFridge && (
+        <FridgeEditModal
+          fridge={editingFridge}
+          onClose={() => setEditingFridge(null)}
+          onSave={handleSaveFridge}
+        />
       )}
     </div>
   );

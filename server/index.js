@@ -1366,6 +1366,67 @@ app.get('/api/fridges/:number', (req, res) => {
   }
 });
 
+// Update fridge details
+app.patch('/api/fridges/:id', (req, res) => {
+  try {
+    const fridgeId = parseInt(req.params.id);
+    const { brand, size, color, condition, status, notes } = req.body;
+
+    // Build update query dynamically
+    const updates = [];
+    const params = [];
+
+    if (brand !== undefined) {
+      updates.push('brand = ?');
+      params.push(brand);
+    }
+    if (size !== undefined) {
+      updates.push('size = ?');
+      params.push(size);
+    }
+    if (color !== undefined) {
+      updates.push('color = ?');
+      params.push(color);
+    }
+    if (condition !== undefined) {
+      updates.push('condition = ?');
+      params.push(condition);
+    }
+    if (status !== undefined) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+    if (notes !== undefined) {
+      updates.push('notes = ?');
+      params.push(notes);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    params.push(fridgeId);
+
+    const query = `
+      UPDATE fridge_inventory
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `;
+
+    const result = db.prepare(query).run(...params);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Fridge not found' });
+    }
+
+    res.json({ success: true, message: 'Fridge updated successfully' });
+  } catch (error) {
+    console.error('Error updating fridge:', error);
+    res.status(500).json({ error: 'Failed to update fridge' });
+  }
+});
+
 // Check-Out Endpoints
 // Create check-out transaction
 app.post('/api/checkouts-out', (req, res) => {
