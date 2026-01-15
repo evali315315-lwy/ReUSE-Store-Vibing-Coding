@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Calendar, Snowflake, Box, Plus, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AddAttributeModal from './AddAttributeModal';
+import BrandSearch from './BrandSearch';
 import { useFridgeAttributes } from '../../hooks/useFridgeAttributes';
 import { fridgeAPI } from '../../services/api';
 
@@ -202,32 +203,18 @@ function FridgeCheckInTab() {
                 </div>
               </div>
 
-              {/* Brand */}
+              {/* Brand - Searchable */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Brand <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={loadingAttributes}
-                  >
-                    <option value="">-- Select brand --</option>
-                    {attributes.brands.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => openModal('brand')}
-                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    title="Add new brand"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
+                <BrandSearch
+                  value={brand}
+                  onChange={setBrand}
+                  brands={attributes.brands}
+                  onAddNew={(newBrand) => {
+                    addBrand(newBrand);
+                    setBrand(newBrand);
+                  }}
+                  required
+                />
               </div>
 
               {/* Condition */}
