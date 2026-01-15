@@ -1716,30 +1716,49 @@ app.get('/api/checkouts-out/active', (req, res) => {
 app.get('/api/checkins/search', (req, res) => {
   try {
     const { q = '' } = req.query;
+    const searchPattern = `${q}%`; // Prefix search only
 
-    // Search inventory items
+    // Search items table and aggregate by item_name
+    // Include ALL items (approved, pending, flagged) for check-in
     const items = db.prepare(`
-      SELECT id, sku, name, category, current_quantity, 'item' as type
-      FROM inventory_items
-      WHERE name LIKE ? OR sku LIKE ?
+      SELECT
+        item_name as name,
+        COUNT(*) as available_quantity,
+        'ITEM-' || SUBSTR(UPPER(item_name), 1, 3) || '-' || MIN(id) as sku,
+        'Donation' as category,
+        'item' as type
+      FROM items
+      WHERE item_name LIKE ?
+      GROUP BY item_name
+      HAVING COUNT(*) > 0
+      ORDER BY item_name
       LIMIT 25
-    `).all(`%${q}%`, `%${q}%`);
+    `).all(searchPattern);
 
-    // Search fridges
+    // Add id field for each aggregated item
+    const itemsWithId = items.map((item, index) => ({
+      id: index + 2000, // Use different offset for check-in
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      current_quantity: item.available_quantity,
+      type: 'item'
+    }));
+
+    // Search fridges (note: table is 'fridges')
     const fridges = db.prepare(`
       SELECT
         id,
         fridge_number,
         brand,
-        has_freezer,
         status,
         'fridge' as type
       FROM fridges
-      WHERE fridge_number LIKE ? OR brand LIKE ?
+      WHERE CAST(fridge_number AS TEXT) LIKE ? OR brand LIKE ?
       LIMIT 25
-    `).all(`%${q}%`, `%${q}%`);
+    `).all(searchPattern, searchPattern);
 
-    res.json([...items, ...fridges]);
+    res.json([...itemsWithId, ...fridges]);
   } catch (error) {
     console.error('Error searching for check-in:', error);
     res.status(500).json({ error: 'Failed to search for check-in' });
