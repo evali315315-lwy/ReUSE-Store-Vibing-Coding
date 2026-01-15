@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -18,6 +18,8 @@ const checkinSchema = z.object({
 const FridgeCheckinForm = ({ checkout, activeCheckouts, onSuccess, onCancel }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCheckoutInfo, setSelectedCheckoutInfo] = useState(checkout);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showResults, setShowResults] = useState(false);
 
   const {
     register,
@@ -42,6 +44,25 @@ const FridgeCheckinForm = ({ checkout, activeCheckouts, onSuccess, onCancel }) =
     }
   }, [watchCheckoutId, activeCheckouts, checkout]);
 
+  // Filter checkouts based on search query
+  const filteredCheckouts = activeCheckouts.filter(c => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      c.fridge_number?.toLowerCase().includes(query) ||
+      c.student_name?.toLowerCase().includes(query) ||
+      c.housing_assignment?.toLowerCase().includes(query) ||
+      c.student_email?.toLowerCase().includes(query)
+    );
+  });
+
+  const handleCheckoutSelect = (checkoutItem) => {
+    setValue('checkoutId', checkoutItem.id.toString());
+    setSelectedCheckoutInfo(checkoutItem);
+    setSearchQuery(`${checkoutItem.fridge_number} - ${checkoutItem.student_name}`);
+    setShowResults(false);
+  };
+
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
@@ -60,7 +81,7 @@ const FridgeCheckinForm = ({ checkout, activeCheckouts, onSuccess, onCancel }) =
   };
 
   return (
-    <div className="card max-w-3xl mx-auto">
+    <div className="card max-w-6xl mx-auto">
       <button
         onClick={onCancel}
         className="flex items-center gap-2 text-eco-primary-600 hover:text-eco-primary-700 mb-4"
@@ -76,23 +97,66 @@ const FridgeCheckinForm = ({ checkout, activeCheckouts, onSuccess, onCancel }) =
         {!checkout && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Checkout to Return <span className="text-red-500">*</span>
+              Search Checkout to Return <span className="text-red-500">*</span>
             </label>
-            <select
-              {...register('checkoutId')}
-              className="input"
-            >
-              <option value="">Choose a checkout...</option>
-              {activeCheckouts.map(c => {
-                const isOverdue = new Date(c.expected_return_date) < new Date();
-                return (
-                  <option key={c.id} value={c.id}>
-                    {c.fridge_number} - {c.student_name} ({c.housing_assignment})
-                    {isOverdue ? ' - OVERDUE' : ''}
-                  </option>
-                );
-              })}
-            </select>
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowResults(true);
+                  }}
+                  onFocus={() => setShowResults(true)}
+                  className="input pl-10 w-full"
+                  placeholder="Search by fridge number, student name, housing, or email..."
+                />
+              </div>
+
+              {/* Search Results Dropdown */}
+              {showResults && searchQuery && filteredCheckouts.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                  {filteredCheckouts.map(c => {
+                    const isOverdue = new Date(c.expected_return_date) < new Date();
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => handleCheckoutSelect(c)}
+                        className="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900">
+                              {c.fridge_number} - {c.student_name}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {c.housing_assignment} • {c.student_email}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Checked out: {new Date(c.checkout_date).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {isOverdue && (
+                            <span className="px-2 py-1 text-xs font-semibold text-red-600 bg-red-100 rounded">
+                              OVERDUE
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* No Results Message */}
+              {showResults && searchQuery && filteredCheckouts.length === 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4">
+                  <p className="text-gray-500 text-center">No checkouts found matching "{searchQuery}"</p>
+                </div>
+              )}
+            </div>
             {errors.checkoutId && (
               <p className="mt-1 text-sm text-red-600">{errors.checkoutId.message}</p>
             )}
