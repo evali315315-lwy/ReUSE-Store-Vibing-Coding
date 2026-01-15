@@ -1341,14 +1341,14 @@ app.post('/api/fridges/checkout', (req, res) => {
           item_name,
           item_quantity,
           year_range,
-          status
+          verification_status
         ) VALUES (?, ?, ?, ?, ?)
       `).run(
         checkoutResult.lastInsertRowid,
         `Fridge #${fridge.fridge_number}`,
         1,
         yearRange,
-        'active'
+        'pending'
       );
 
       // Update fridge status
