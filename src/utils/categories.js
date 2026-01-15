@@ -1,15 +1,10 @@
 // Category constants for inventory items
 export const CATEGORIES = [
-  "Kitchen appliance",
-  "Household appliance",
+  "Kitchen",
+  "Cleaning",
+  "Personal Care",
+  "Home Comfort",
   "Electronics",
-  "Body and Hair Care",
-  "Laundry",
-  "Decorations and Dorm Supplies",
-  "Mirrors",
-  "Lamps",
-  "Feminine Care",
-  "Art and Music Supplies",
   "Other"
 ];
 
@@ -20,7 +15,7 @@ export const CATEGORIES = [
  * @returns {Array} Filtered items
  */
 export function getItemsByCategory(items, category) {
-  return items.filter(item => item.categories && item.categories.includes(category));
+  return items.filter(item => item.category && item.category === category);
 }
 
 /**
@@ -35,8 +30,8 @@ export function getItemsByCategories(items, categories) {
   }
 
   return items.filter(item => {
-    if (!item.categories) return false;
-    return categories.some(cat => item.categories.includes(cat));
+    if (!item.category) return false;
+    return categories.includes(item.category);
   });
 }
 

@@ -2,12 +2,21 @@ import { useState } from 'react';
 import { Calendar, Plus, Trash2, Save, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CheckInSearch from './CheckInSearch';
+import VariantSelector from './VariantSelector';
+import CategorySelector from './CategorySelector';
 import { checkinAPI, inventoryAPI } from '../../services/api';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 function CheckInTab() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showVariantSelector, setShowVariantSelector] = useState(false);
+  const [showCategorySelector, setShowCategorySelector] = useState(false);
+  const [pendingItem, setPendingItem] = useState(null);
+  const [pendingNewItemName, setPendingNewItemName] = useState('');
 
   const currentDate = new Date().toLocaleDateString();
 
@@ -15,25 +24,9 @@ function CheckInTab() {
   const handleItemAdd = async (item) => {
     // Check if this is a new item that needs to be created
     if (item.isNew) {
-      try {
-        toast.loading('Creating new item...', { id: 'create-item' });
-
-        // Create the new item in the database
-        const newItem = await inventoryAPI.createItem({
-          name: item.name,
-          category: 'Other',
-          quantity: 1,
-          createdBy: 'worker@haverford.edu' // TODO: Get from auth context
-        });
-
-        toast.success('New item created!', { id: 'create-item' });
-
-        // Add the newly created item to selected items
-        setSelectedItems([...selectedItems, { ...newItem, type: 'item', quantity: 1 }]);
-      } catch (error) {
-        console.error('Error creating item:', error);
-        toast.error(error.response?.data?.error || 'Failed to create item', { id: 'create-item' });
-      }
+      // Show category selector first
+      setPendingNewItemName(item.name);
+      setShowCategorySelector(true);
       return;
     }
 
@@ -47,9 +40,60 @@ function CheckInTab() {
       return;
     }
 
-    // Add item with default quantity of 1
-    setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
-    toast.success(`Added ${item.type === 'fridge' ? `Fridge #${item.fridge_number}` : item.name}`);
+    // Open variant selector for existing item
+    setPendingItem(item);
+    setShowVariantSelector(true);
+  };
+
+  // Handle category selection for new item
+  const handleCategoryConfirm = async (category) => {
+    setShowCategorySelector(false);
+
+    try {
+      toast.loading('Creating new item...', { id: 'create-item' });
+
+      // Create the new item in the database with selected category
+      const response = await inventoryAPI.createItem({
+        name: pendingNewItemName,
+        category: category,
+        quantity: 0,  // Don't add quantity yet
+        createdBy: 'worker@haverford.edu' // TODO: Get from auth context
+      });
+
+      toast.success('New item created!', { id: 'create-item' });
+
+      // Extract the item from the response (API returns { message, item })
+      const newItem = response.item || response;
+
+      // Open variant selector for the newly created item
+      setPendingItem(newItem);
+      setShowVariantSelector(true);
+      setPendingNewItemName('');
+    } catch (error) {
+      console.error('Error creating item:', error);
+      toast.error(error.response?.data?.error || 'Failed to create item', { id: 'create-item' });
+      setPendingNewItemName('');
+    }
+  };
+
+  // Handle category selection cancel
+  const handleCategoryCancel = () => {
+    setShowCategorySelector(false);
+    setPendingNewItemName('');
+  };
+
+  // Handle variant confirmation
+  const handleVariantConfirm = (itemWithVariant) => {
+    setSelectedItems([...selectedItems, { ...itemWithVariant, quantity: 1 }]);
+    setShowVariantSelector(false);
+    setPendingItem(null);
+    toast.success(`Added ${itemWithVariant.item_name || itemWithVariant.name}${itemWithVariant.variantDescription ? ` (${itemWithVariant.variantDescription})` : ''}`);
+  };
+
+  // Handle variant cancel
+  const handleVariantCancel = () => {
+    setShowVariantSelector(false);
+    setPendingItem(null);
   };
 
   // Update item quantity
@@ -78,17 +122,27 @@ function CheckInTab() {
     setSubmitting(true);
 
     try {
-      const checkinData = {
-        items: selectedItems.map(item => ({
-          type: 'item',
-          itemId: item.id,
-          quantity: item.quantity
-        })),
-        checkedInBy: 'worker@haverford.edu', // TODO: Get from auth context
-        notes: notes || null
-      };
+      // Process each item with its variant
+      for (const item of selectedItems) {
+        if (item.variantDescription) {
+          // Add or update the variant
+          await axios.post(`${API_URL}/inventory/${item.id}/variants`, {
+            variant_description: item.variantDescription,
+            quantity: item.quantity
+          });
+        } else {
+          // Update main inventory quantity
+          const response = await axios.get(`${API_URL}/inventory`);
+          const inventoryItems = response.data;
+          const existingItem = inventoryItems.find(i => i.id === item.id);
 
-      const result = await checkinAPI.createCheckin(checkinData);
+          if (existingItem) {
+            await axios.patch(`${API_URL}/inventory/${item.id}`, {
+              quantity: existingItem.quantity + item.quantity
+            });
+          }
+        }
+      }
 
       toast.success('Items checked in successfully!');
 
@@ -144,10 +198,15 @@ function CheckInTab() {
                 {/* Item Details */}
                 <div className="flex-1">
                   <p className="font-semibold text-gray-900">
-                    {item.name}
+                    {item.item_name || item.name}
+                    {item.variantDescription && (
+                      <span className="ml-2 text-sm font-normal text-eco-primary-600">
+                        ({item.variantDescription})
+                      </span>
+                    )}
                   </p>
                   <p className="text-sm text-gray-600">
-                    SKU: {item.sku} • {item.category}
+                    {item.sku ? `SKU: ${item.sku} • ` : ''}{item.category}
                   </p>
                 </div>
 
@@ -218,6 +277,24 @@ function CheckInTab() {
         <p className="text-center text-sm text-gray-500">
           Search and add items above to check them in
         </p>
+      )}
+
+      {/* Category Selector Modal */}
+      {showCategorySelector && pendingNewItemName && (
+        <CategorySelector
+          itemName={pendingNewItemName}
+          onConfirm={handleCategoryConfirm}
+          onCancel={handleCategoryCancel}
+        />
+      )}
+
+      {/* Variant Selector Modal */}
+      {showVariantSelector && pendingItem && (
+        <VariantSelector
+          item={pendingItem}
+          onConfirm={handleVariantConfirm}
+          onCancel={handleVariantCancel}
+        />
       )}
     </form>
   );

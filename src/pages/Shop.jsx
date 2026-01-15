@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import ShopHeader from '../components/shop/ShopHeader';
 import SearchBar from '../components/shop/SearchBar';
 import CategoryFilter from '../components/shop/CategoryFilter';
 import ItemGrid from '../components/shop/ItemGrid';
 import TypoSuggestion from '../components/shop/TypoSuggestion';
 import { searchItems, getAutocompleteSuggestions, suggestCorrections } from '../utils/searchUtils';
-import inventoryData from '../data/inventory.json';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Custom hook for debouncing
 function useDebounce(value, delay) {
@@ -32,16 +34,75 @@ function Shop() {
   // Debounce search input for better performance
   const debouncedSearchInput = useDebounce(searchInput, 300);
 
-  // Load inventory data on mount
+  // Load inventory data from API on mount
   useEffect(() => {
     const loadInventory = async () => {
       setIsLoading(true);
       try {
-        // In a real app, this would be an API call
-        // For now, we're importing the JSON directly
-        setInventory(inventoryData.items || []);
+        // Fetch inventory from the real database API
+        const response = await axios.get(`${API_URL}/inventory`);
+        const items = response.data || [];
+
+        // Fetch variants for each item and expand into separate cards
+        const expandedItems = [];
+
+        for (const item of items) {
+          try {
+            const variantsResponse = await axios.get(`${API_URL}/inventory/${item.id}/variants`);
+            const variants = variantsResponse.data || [];
+
+            if (variants.length > 0) {
+              // If item has variants, show each variant as a separate card
+              variants.forEach(variant => {
+                if (variant.quantity > 0) { // Only show variants in stock
+                  expandedItems.push({
+                    id: `${item.id}-v${variant.id}`,
+                    name: variant.variant_description, // Use variant description as the name
+                    category: item.category || 'Other',
+                    quantity: variant.quantity,
+                    description: item.item_name, // Parent item name as description
+                    image: item.image_url || '/placeholder-image.jpg',
+                    available: variant.quantity,
+                    isVariant: true,
+                    parentId: item.id,
+                    variantId: variant.id
+                  });
+                }
+              });
+            } else {
+              // No variants, show the main item if it has quantity
+              if (item.quantity > 0) {
+                expandedItems.push({
+                  id: item.id,
+                  name: item.item_name,
+                  category: item.category || 'Other',
+                  quantity: item.quantity,
+                  description: item.description || '',
+                  image: item.image_url || '/placeholder-image.jpg',
+                  available: item.quantity
+                });
+              }
+            }
+          } catch (error) {
+            // If error fetching variants, just show the main item if it has quantity
+            if (item.quantity > 0) {
+              expandedItems.push({
+                id: item.id,
+                name: item.item_name,
+                category: item.category || 'Other',
+                quantity: item.quantity,
+                description: item.description || '',
+                image: item.image_url || '/placeholder-image.jpg',
+                available: item.quantity
+              });
+            }
+          }
+        }
+
+        setInventory(expandedItems);
       } catch (error) {
         console.error('Failed to load inventory:', error);
+        setInventory([]);
       } finally {
         setIsLoading(false);
       }
