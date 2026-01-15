@@ -920,12 +920,26 @@ app.get('/api/inventory/search', (req, res) => {
 // Get all inventory items (admin only - no auth yet, will add later)
 app.get('/api/inventory', (req, res) => {
   try {
-    const items = db.prepare(`
-      SELECT id, sku, name, category, current_quantity, available_quantity
-      FROM inventory_items
-      ORDER BY name
-    `).all();
+    const search = req.query.search || '';
 
+    let query = `
+      SELECT
+        id,
+        item_name,
+        quantity,
+        description,
+        last_updated,
+        created_at
+      FROM inventory
+    `;
+
+    if (search) {
+      query += ` WHERE item_name LIKE ?`;
+      const items = db.prepare(query + ` ORDER BY item_name`).all(`%${search}%`);
+      return res.json(items);
+    }
+
+    const items = db.prepare(query + ` ORDER BY item_name`).all();
     res.json(items);
   } catch (error) {
     console.error('Error fetching inventory:', error);
@@ -936,39 +950,159 @@ app.get('/api/inventory', (req, res) => {
 // Create new inventory item
 app.post('/api/inventory', (req, res) => {
   try {
-    const { name, category = 'Other', quantity = 1, createdBy } = req.body;
+    const { itemName, quantity = 1, description = '' } = req.body;
 
-    if (!name || !name.trim()) {
+    if (!itemName || !itemName.trim()) {
       return res.status(400).json({ error: 'Item name is required' });
     }
 
-    // Generate SKU (simple format: first 3 letters + random number)
-    const prefix = name.substring(0, 3).toUpperCase();
-    const randomNum = Math.floor(Math.random() * 100000);
-    const sku = `${prefix}${randomNum}`;
+    const existing = db.prepare('SELECT * FROM inventory WHERE item_name = ?').get(itemName);
+
+    if (existing) {
+      // Update quantity for existing item
+      const newQuantity = existing.quantity + quantity;
+      db.prepare(`
+        UPDATE inventory
+        SET quantity = ?, description = ?
+        WHERE item_name = ?
+      `).run(newQuantity, description || existing.description, itemName);
+
+      const updated = db.prepare('SELECT * FROM inventory WHERE item_name = ?').get(itemName);
+      res.json({ message: 'Inventory updated', item: updated });
+    } else {
+      // Insert new item
+      const stmt = db.prepare(`
+        INSERT INTO inventory (item_name, quantity, description, category)
+        VALUES (?, ?, ?, ?)
+      `);
+
+      const result = stmt.run(itemName.trim(), quantity, description, 'Other');
+      const newItem = db.prepare('SELECT * FROM inventory WHERE id = ?').get(result.lastInsertRowid);
+      res.json({ message: 'Item added to inventory', item: newItem });
+    }
+  } catch (error) {
+    console.error('Error adding/updating inventory:', error);
+    res.status(500).json({ error: 'Failed to add/update inventory' });
+  }
+});
+
+// Update inventory item quantity
+app.patch('/api/inventory/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, description } = req.body;
+
+    const updates = [];
+    const params = [];
+
+    if (quantity !== undefined) {
+      updates.push('quantity = ?');
+      params.push(quantity);
+    }
+
+    if (description !== undefined) {
+      updates.push('description = ?');
+      params.push(description);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(id);
 
     const stmt = db.prepare(`
-      INSERT INTO inventory_items (sku, name, category, current_quantity, available_quantity, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
+      UPDATE inventory
+      SET ${updates.join(', ')}
+      WHERE id = ?
     `);
+    stmt.run(...params);
 
-    const result = stmt.run(sku, name.trim(), category, quantity, quantity, createdBy || null);
-
-    res.json({
-      success: true,
-      id: result.lastInsertRowid,
-      sku,
-      name: name.trim(),
-      category,
-      current_quantity: quantity,
-      available_quantity: quantity
-    });
+    const updated = db.prepare('SELECT * FROM inventory WHERE id = ?').get(id);
+    res.json({ message: 'Inventory item updated', item: updated });
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'An item with this SKU already exists' });
+    console.error('Error updating inventory:', error);
+    res.status(500).json({ error: 'Failed to update inventory' });
+  }
+});
+
+// Delete inventory item
+app.delete('/api/inventory/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const stmt = db.prepare('DELETE FROM inventory WHERE id = ?');
+    const result = stmt.run(id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Item not found' });
     }
-    console.error('Error creating inventory item:', error);
-    res.status(500).json({ error: 'Failed to create inventory item' });
+
+    res.json({ message: 'Item deleted from inventory' });
+  } catch (error) {
+    console.error('Error deleting inventory:', error);
+    res.status(500).json({ error: 'Failed to delete inventory item' });
+  }
+});
+
+// Get all variants for an inventory item
+app.get('/api/inventory/:id/variants', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const variants = db.prepare(`
+      SELECT * FROM item_variants
+      WHERE inventory_id = ?
+      ORDER BY variant_description ASC
+    `).all(id);
+
+    res.json(variants);
+  } catch (error) {
+    console.error('Error fetching variants:', error);
+    res.status(500).json({ error: 'Failed to fetch variants' });
+  }
+});
+
+// Add or update a variant for an item
+app.post('/api/inventory/:id/variants', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { variant_description, quantity = 0 } = req.body;
+
+    if (!variant_description || !variant_description.trim()) {
+      return res.status(400).json({ error: 'variant_description is required' });
+    }
+
+    const existing = db.prepare(`
+      SELECT * FROM item_variants
+      WHERE inventory_id = ? AND variant_description = ?
+    `).get(id, variant_description);
+
+    if (existing) {
+      // Update quantity
+      const newQuantity = existing.quantity + quantity;
+      db.prepare(`
+        UPDATE item_variants
+        SET quantity = ?
+        WHERE id = ?
+      `).run(newQuantity, existing.id);
+
+      const updated = db.prepare('SELECT * FROM item_variants WHERE id = ?').get(existing.id);
+      res.json({ message: 'Variant updated', variant: updated });
+    } else {
+      // Insert new variant
+      const stmt = db.prepare(`
+        INSERT INTO item_variants (inventory_id, variant_description, quantity)
+        VALUES (?, ?, ?)
+      `);
+      const result = stmt.run(id, variant_description, quantity);
+
+      const newVariant = db.prepare('SELECT * FROM item_variants WHERE id = ?').get(result.lastInsertRowid);
+      res.json({ message: 'Variant added', variant: newVariant });
+    }
+  } catch (error) {
+    console.error('Error adding/updating variant:', error);
+    res.status(500).json({ error: 'Failed to add/update variant' });
   }
 });
 
@@ -1991,7 +2125,13 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/verification/checkouts    - Get grouped checkouts for verification`);
   console.log(`   PATCH /api/verification/checkouts/:checkoutId - Update checkout verification status`);
   console.log(`   GET  /api/analytics/top-items       - Get top items (optional ?year=)`);
-  console.log(`   GET  /api/items/search              - Search items (required ?query=)\n`);
+  console.log(`   GET  /api/items/search              - Search items (required ?query=)`);
+  console.log(`   GET  /api/inventory                 - Get all inventory items (optional ?search=)`);
+  console.log(`   POST /api/inventory                 - Add or update inventory item`);
+  console.log(`   PATCH /api/inventory/:id            - Update inventory item`);
+  console.log(`   DELETE /api/inventory/:id           - Delete inventory item`);
+  console.log(`   GET  /api/inventory/:id/variants    - Get variants for inventory item`);
+  console.log(`   POST /api/inventory/:id/variants    - Add or update variant\n`);
 });
 
 // Graceful shutdown
