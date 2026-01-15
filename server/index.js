@@ -879,6 +879,7 @@ app.get('/api/inventory/search', (req, res) => {
 
     // Query items table and aggregate by item_name
     // Only include approved donated items (these are available for checkout to students)
+    // Exclude fridge records: items with fridge_company_id OR items named "Fridge" or "Fridge #X"
     const query = `
       SELECT
         item_name as name,
@@ -888,6 +889,8 @@ app.get('/api/inventory/search', (req, res) => {
       FROM items
       WHERE item_name LIKE ?
         AND verification_status = 'approved'
+        AND fridge_company_id IS NULL
+        AND item_name NOT LIKE 'Fridge%'
       GROUP BY item_name
       HAVING COUNT(*) > 0
       ORDER BY item_name
@@ -976,9 +979,12 @@ app.get('/api/fridges/attributes', (req, res) => {
     const brands = db.prepare('SELECT DISTINCT brand FROM fridges WHERE brand IS NOT NULL ORDER BY brand').all().map(r => r.brand);
     const conditions = db.prepare('SELECT DISTINCT condition FROM fridges WHERE condition IS NOT NULL ORDER BY condition').all().map(r => r.condition);
 
+    // Standard fridge colors (color field not used in current database)
+    const colors = ['White', 'Black', 'Stainless Steel', 'Silver', 'Gray', 'Red', 'Blue'];
+
     res.json({
       sizes,
-      colors: [], // No color field in fridges table
+      colors,
       brands,
       conditions
     });
@@ -1725,6 +1731,7 @@ app.get('/api/checkins/search', (req, res) => {
 
     // Search items table and aggregate by item_name
     // Include ALL items (approved, pending, flagged) for check-in
+    // Exclude fridge records: items with fridge_company_id OR items named "Fridge" or "Fridge #X"
     const items = db.prepare(`
       SELECT
         item_name as name,
@@ -1734,6 +1741,8 @@ app.get('/api/checkins/search', (req, res) => {
         'item' as type
       FROM items
       WHERE item_name LIKE ?
+        AND fridge_company_id IS NULL
+        AND item_name NOT LIKE 'Fridge%'
       GROUP BY item_name
       HAVING COUNT(*) > 0
       ORDER BY item_name
