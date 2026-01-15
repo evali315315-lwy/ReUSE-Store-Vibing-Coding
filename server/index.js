@@ -3,6 +3,11 @@ import cors from 'cors';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import googleDriveService from './services/googleDrive.js';
+
+// Load environment variables from .env.local
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,9 +19,13 @@ const PORT = 3001;
 const DB_PATH = path.join(__dirname, '../database/reuse-store.db');
 const db = new Database(DB_PATH, { readonly: false });
 
+// Initialize Google Drive service
+googleDriveService.initialize();
+
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase limit for base64 images
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -1513,9 +1522,9 @@ app.patch('/api/fridges/:id', (req, res) => {
 
 // Check-Out Endpoints
 // Create check-out transaction
-app.post('/api/checkouts-out', (req, res) => {
+app.post('/api/checkouts-out', async (req, res) => {
   try {
-    const { student, items, checkedOutBy, notes } = req.body;
+    const { student, items, checkedOutBy, notes, checkoutPhoto } = req.body;
 
     if (!student || !student.name || !student.email) {
       return res.status(400).json({ error: 'Student information is required' });
@@ -1525,67 +1534,86 @@ app.post('/api/checkouts-out', (req, res) => {
       return res.status(400).json({ error: 'At least one item is required' });
     }
 
+    if (!checkoutPhoto) {
+      return res.status(400).json({ error: 'Checkout photo is required' });
+    }
+
+    // Upload photo to Google Drive (or store as base64 if not configured)
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `checkout-${student.email}-${timestamp}.jpg`;
+    const photoUrl = await googleDriveService.uploadPhoto(checkoutPhoto, filename);
+
+    // Calculate year range
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const month = now.getMonth();
+    const yearRange = month >= 7 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
+
     // Start transaction
     db.prepare('BEGIN').run();
 
     try {
-      // Create or update student
-      const existingStudent = db.prepare('SELECT id FROM students WHERE email = ?').get(student.email);
-      let studentId;
-
-      if (existingStudent) {
-        studentId = existingStudent.id;
-        db.prepare(`
-          UPDATE students
-          SET name = ?, housing_assignment = ?, graduation_year = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `).run(student.name, student.housing || null, student.gradYear || null, studentId);
-      } else {
-        const result = db.prepare(`
-          INSERT INTO students (name, email, housing_assignment, graduation_year)
-          VALUES (?, ?, ?, ?)
-        `).run(student.name, student.email, student.housing || null, student.gradYear || null);
-        studentId = result.lastInsertRowid;
-      }
-
-      // Create checkout record
+      // Create checkout record in checkouts table (using actual database structure)
       const checkoutResult = db.prepare(`
-        INSERT INTO checkouts_out (student_id, checked_out_by, notes)
-        VALUES (?, ?, ?)
-      `).run(studentId, checkedOutBy || null, notes || null);
+        INSERT INTO checkouts (
+          date,
+          owner_name,
+          email,
+          housing_assignment,
+          graduation_year,
+          year_range,
+          notes,
+          needs_approval,
+          verification_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        new Date().toISOString(),
+        student.name,
+        student.email,
+        student.housing || '',
+        student.gradYear || '',
+        yearRange,
+        notes || '',
+        0,  // Checkouts start as not needing approval
+        'pending'  // Verification status starts as pending
+      );
 
       const checkoutId = checkoutResult.lastInsertRowid;
 
-      // Add checkout items and update inventory
+      // Add each item to items table with the shared photo URL
       for (const item of items) {
-        if (item.type === 'item') {
-          // Add checkout item
-          db.prepare(`
-            INSERT INTO checkout_items (checkout_id, item_id, quantity)
-            VALUES (?, ?, ?)
-          `).run(checkoutId, item.itemId, item.quantity);
+        // Get item details from database by searching for matching item name
+        const itemDetails = db.prepare(`
+          SELECT DISTINCT item_name
+          FROM items
+          WHERE item_name LIKE ?
+            AND fridge_company_id IS NULL
+            AND item_name NOT LIKE 'Fridge%'
+          LIMIT 1
+        `).get(`${item.name || item.itemName || 'Item'}%`);
 
-          // Update inventory quantity
-          db.prepare(`
-            UPDATE inventory_items
-            SET available_quantity = available_quantity - ?
-            WHERE id = ?
-          `).run(item.quantity, item.itemId);
+        const itemName = itemDetails ? itemDetails.item_name : (item.name || item.itemName || 'Item');
 
-        } else if (item.type === 'fridge') {
-          // Add checkout item
-          db.prepare(`
-            INSERT INTO checkout_items (checkout_id, fridge_id, quantity)
-            VALUES (?, ?, 1)
-          `).run(checkoutId, item.fridgeId);
-
-          // Update fridge status
-          db.prepare(`
-            UPDATE fridges
-            SET status = 'checked_out'
-            WHERE id = ?
-          `).run(item.fridgeId);
-        }
+        // Insert item with photo URL
+        db.prepare(`
+          INSERT INTO items (
+            checkout_id,
+            item_name,
+            item_quantity,
+            year_range,
+            verification_status,
+            image_url,
+            description
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          checkoutId,
+          itemName,
+          item.quantity || 1,
+          yearRange,
+          'pending',
+          photoUrl,
+          `Checked out by ${student.name}`
+        );
       }
 
       db.prepare('COMMIT').run();
@@ -1593,6 +1621,7 @@ app.post('/api/checkouts-out', (req, res) => {
       res.json({
         success: true,
         checkoutId,
+        photoUrl,
         message: 'Items checked out successfully'
       });
 
@@ -1602,7 +1631,7 @@ app.post('/api/checkouts-out', (req, res) => {
     }
   } catch (error) {
     console.error('Error creating checkout:', error);
-    res.status(500).json({ error: 'Failed to create checkout' });
+    res.status(500).json({ error: 'Failed to create checkout', details: error.message });
   }
 });
 
