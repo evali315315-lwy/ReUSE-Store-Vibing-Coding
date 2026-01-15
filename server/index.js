@@ -875,17 +875,37 @@ app.post('/api/students', (req, res) => {
 app.get('/api/inventory/search', (req, res) => {
   try {
     const { q = '' } = req.query;
+    const searchPattern = `${q}%`; // Prefix search only
 
+    // Query items table and aggregate by item_name
+    // Only include approved donated items (these are available for checkout to students)
     const query = `
-      SELECT id, sku, name, category, available_quantity
-      FROM inventory_items
-      WHERE (name LIKE ? OR sku LIKE ?) AND available_quantity > 0
-      ORDER BY name
+      SELECT
+        item_name as name,
+        COUNT(*) as available_quantity,
+        'ITEM-' || SUBSTR(UPPER(item_name), 1, 3) || '-' || MIN(id) as sku,
+        'Donation' as category
+      FROM items
+      WHERE item_name LIKE ?
+        AND verification_status = 'approved'
+      GROUP BY item_name
+      HAVING COUNT(*) > 0
+      ORDER BY item_name
       LIMIT 50
     `;
 
-    const items = db.prepare(query).all(`%${q}%`, `%${q}%`);
-    res.json(items);
+    const items = db.prepare(query).all(searchPattern);
+
+    // Add an id field for each aggregated item (use a hash of the name)
+    const itemsWithId = items.map((item, index) => ({
+      id: index + 1000, // Use offset to avoid conflicts
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      available_quantity: item.available_quantity
+    }));
+
+    res.json(itemsWithId);
   } catch (error) {
     console.error('Error searching inventory:', error);
     res.status(500).json({ error: 'Failed to search inventory' });
