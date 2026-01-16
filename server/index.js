@@ -302,17 +302,34 @@ app.get('/api/verification/items', (req, res) => {
 
     const items = db.prepare(query).all(...params, limit, offset);
 
-    // Get stats for all statuses
+    // Get stats for all statuses (count ENTRIES/checkout sessions, not individual items)
     const stats = {
-      pending: db.prepare('SELECT COUNT(*) as count FROM items WHERE verification_status = ?').get('pending').count,
+      pending: db.prepare(`
+        SELECT COUNT(DISTINCT items.checkout_id) as count
+        FROM items
+        JOIN checkouts ON items.checkout_id = checkouts.id
+        WHERE items.verification_status = ?
+        AND checkouts.needs_approval = 1
+      `).get('pending').count,
       approved: (() => {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        return db.prepare(
-          'SELECT COUNT(*) as count FROM items WHERE verification_status = ? AND verified_at >= datetime(?)'
-        ).get('approved', oneMonthAgo.toISOString()).count;
+        return db.prepare(`
+          SELECT COUNT(DISTINCT items.checkout_id) as count
+          FROM items
+          JOIN checkouts ON items.checkout_id = checkouts.id
+          WHERE items.verification_status = ?
+          AND items.verified_at >= datetime(?)
+          AND checkouts.needs_approval = 1
+        `).get('approved', oneMonthAgo.toISOString()).count;
       })(),
-      flagged: db.prepare('SELECT COUNT(*) as count FROM items WHERE verification_status = ?').get('flagged').count
+      flagged: db.prepare(`
+        SELECT COUNT(DISTINCT items.checkout_id) as count
+        FROM items
+        JOIN checkouts ON items.checkout_id = checkouts.id
+        WHERE items.verification_status = ?
+        AND checkouts.needs_approval = 1
+      `).get('flagged').count
     };
 
     res.json({
