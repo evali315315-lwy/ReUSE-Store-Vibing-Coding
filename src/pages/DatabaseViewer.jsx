@@ -451,13 +451,18 @@ function DatabaseViewer() {
         [field]: value
       });
 
-      // Update local state
-      setSelectedCheckout(prev => ({
-        ...prev,
-        items: prev.items.map(item =>
+      // Update local state - force new object to trigger re-render
+      setSelectedCheckout(prev => {
+        const updatedItems = prev.items.map(item =>
           item.id === itemId ? { ...item, [field]: value } : item
-        )
-      }));
+        );
+        return {
+          ...prev,
+          items: updatedItems,
+          // Force re-calculation of total items
+          totalItems: updatedItems.length
+        };
+      });
 
       // Update in the list
       setCheckouts(prev => prev.map(c => ({
