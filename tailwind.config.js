@@ -7,30 +7,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Vibrant greens for eco theme
+        // Darker forest greens for eco theme
         'eco-primary': {
-          50: '#ecfdf5',   // Mint cream
-          100: '#d1fae5',  // Bright mint
-          200: '#a7f3d0',  // Light emerald
-          300: '#6ee7b7',  // Seafoam green
-          400: '#34d399',  // Vibrant green
-          500: '#10b981',  // Emerald (primary)
-          600: '#059669',  // Rich emerald
-          700: '#047857',  // Deep emerald
-          800: '#065f46',  // Forest emerald
-          900: '#064e3b',  // Very dark emerald
+          50: '#e8f5e3',   // Light sage
+          100: '#c8e6c0',  // Pale green
+          200: '#a5d69d',  // Soft green
+          300: '#81c77a',  // Medium green
+          400: '#66b85e',  // Forest green
+          500: '#4a9943',  // Deep forest (primary)
+          600: '#3d833a',  // Rich forest
+          700: '#2f6b2f',  // Dark forest
+          800: '#215323',  // Very dark forest
+          900: '#133b18',  // Almost black forest
         },
-        // Lime accents for energy
+        // Darker lime accents
         'eco-lime': {
-          light: '#d9f99d',  // Light lime
-          DEFAULT: '#84cc16', // Lime green
-          dark: '#4d7c0f',   // Dark lime
+          light: '#cddc39',  // Lime
+          DEFAULT: '#9caf28', // Dark lime
+          dark: '#6d7a1f',   // Very dark lime
         },
-        // Teal accents for depth
+        // Darker teal accents
         'eco-teal': {
-          light: '#5eead4',  // Light teal
-          DEFAULT: '#14b8a6', // Teal
-          dark: '#0f766e',   // Dark teal
+          light: '#4db6ac',  // Medium teal
+          DEFAULT: '#00897b', // Dark teal
+          dark: '#00564f',   // Very dark teal
         },
         // Earthy accents
         'eco-earth': {
