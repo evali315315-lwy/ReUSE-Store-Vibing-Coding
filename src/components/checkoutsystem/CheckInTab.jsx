@@ -161,13 +161,13 @@ function CheckInTab() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Header */}
-      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-        <h2 className="text-2xl font-bold text-green-900 flex items-center gap-2">
+      <div className="bg-eco-primary-50 p-4 rounded-lg border border-eco-primary-200">
+        <h2 className="text-2xl font-bold text-eco-primary-900 flex items-center gap-2">
           <Calendar className="w-6 h-6" />
           Check-In Items
         </h2>
-        <p className="text-sm text-green-700 mt-1">Date: {currentDate}</p>
-        <p className="text-xs text-green-600 mt-2">
+        <p className="text-sm text-eco-primary-700 mt-1">Date: {currentDate}</p>
+        <p className="text-xs text-eco-primary-600 mt-2">
           No personal information needed - just search and add items
         </p>
       </div>

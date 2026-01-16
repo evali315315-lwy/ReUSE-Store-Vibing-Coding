@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Recycle, ShoppingBag, Clock, MapPin, Mail, Heart } from 'lucide-react';
+import { Recycle, ShoppingBag, Clock, MapPin, Mail, Heart, ExternalLink, Instagram, BookOpen } from 'lucide-react';
 import reuseLogo from '../../assets/(RE)use Store Logo for Email (2) (1).png';
 import { settingsAPI } from '../../services/settingsAPI';
 import { useVersion } from '../../contexts/VersionContext';
@@ -221,7 +221,7 @@ function AboutContent() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-48 bg-gradient-to-b from-eco-primary-100 via-eco-teal-light/20 to-transparent rounded-full blur-3xl -z-10"></div>
 
         <div className="flex justify-center items-center mb-6">
-          <img src={reuseLogo} alt="ReUSE Store Logo" className="h-32 w-auto object-contain" />
+          <img src={reuseLogo} alt="ReUSE Store Logo" className="h-64 w-auto object-contain" />
         </div>
 
         <h1 className="text-5xl font-bold bg-gradient-to-r from-eco-primary-700 via-eco-teal-dark to-eco-primary-800 bg-clip-text text-transparent mb-4 font-display">
@@ -546,6 +546,56 @@ function AboutContent() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* External Links */}
+      <section className="card max-w-4xl mx-auto bg-gradient-to-br from-eco-teal-light/30 to-eco-primary-100 border-2 border-eco-teal-light shadow-lg">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-eco-primary-700 to-eco-teal-dark bg-clip-text text-transparent mb-6 text-center">
+          Learn More About ReUSE
+        </h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Haverford Website */}
+          <a
+            href="https://www.haverford.edu/first-generationlow-income-students/haverford-reuses#-re-use-store-collection-dates"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center gap-3 p-6 bg-white rounded-lg hover:shadow-xl transition-all border-2 border-eco-primary-200 hover:border-eco-primary-400 group"
+          >
+            <div className="p-3 bg-gradient-to-br from-eco-primary-200 to-eco-teal-light rounded-lg shadow-md group-hover:scale-110 transition-transform">
+              <ExternalLink className="w-8 h-8 text-eco-primary-700" />
+            </div>
+            <h3 className="text-xl font-bold text-eco-primary-800 text-center">Haverford ReUSE Website</h3>
+            <p className="text-sm text-gray-600 text-center">Visit our official page for collection dates and more information</p>
+          </a>
+
+          {/* Instagram */}
+          <a
+            href="https://www.instagram.com/haverfordreuses/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center gap-3 p-6 bg-white rounded-lg hover:shadow-xl transition-all border-2 border-eco-primary-200 hover:border-eco-primary-400 group"
+          >
+            <div className="p-3 bg-gradient-to-br from-pink-200 to-purple-200 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+              <Instagram className="w-8 h-8 text-pink-600" />
+            </div>
+            <h3 className="text-xl font-bold text-eco-primary-800 text-center">Follow Us on Instagram</h3>
+            <p className="text-sm text-gray-600 text-center">Stay updated with our latest posts and announcements</p>
+          </a>
+
+          {/* Handbook */}
+          <a
+            href="https://docs.google.com/document/d/1JtnRW9imGvhqWvG5ylHtdLLl7jyANSRNI23BOqbET04/edit?tab=t.0#heading=h.3p15pulrd9rw"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center gap-3 p-6 bg-white rounded-lg hover:shadow-xl transition-all border-2 border-eco-primary-200 hover:border-eco-primary-400 group"
+          >
+            <div className="p-3 bg-gradient-to-br from-eco-teal-light to-eco-primary-300 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+              <BookOpen className="w-8 h-8 text-eco-teal-dark" />
+            </div>
+            <h3 className="text-xl font-bold text-eco-primary-800 text-center">ReUSE Handbook</h3>
+            <p className="text-sm text-gray-600 text-center">Read our comprehensive guide and resources</p>
+          </a>
         </div>
       </section>
 

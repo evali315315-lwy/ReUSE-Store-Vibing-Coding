@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { Leaf, ChevronDown, Users, Briefcase, Shield } from 'lucide-react';
 import squirrelLogo from '../../assets/squirrel.svg';
 import reuseLogo from '../../assets/(RE)use Store Logo for Email (2) (1).png';
@@ -26,12 +26,12 @@ function Header() {
   return (
     <header className="bg-gradient-to-r from-eco-primary-600 via-eco-teal to-eco-primary-700 text-white shadow-lg">
       <nav className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-6">
           {/* Logo/Brand with ReUSE Logo */}
-          <div className="flex items-center gap-3">
-            <img src={reuseLogo} alt="ReUSE Store Logo" className="h-14 w-auto object-contain" />
-            <h1 className="text-2xl font-bold font-display">ReUSE Store</h1>
-          </div>
+          <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity flex-shrink-0">
+            <img src={reuseLogo} alt="ReUSE Store Logo" className="h-20 w-auto object-contain" />
+            <h1 className="text-xl font-bold font-display whitespace-nowrap">ReUSE Store</h1>
+          </Link>
 
           {/* Navigation Tabs */}
           <div className="flex items-center gap-4">
