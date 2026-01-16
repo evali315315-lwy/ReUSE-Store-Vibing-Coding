@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, Calendar, AlertCircle, CheckCircle, Wrench, UserCheck, UserX } from 'lucide-react';
+import { Package, Calendar, AlertCircle, CheckCircle, Wrench, UserCheck, UserX, Search } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -16,6 +16,7 @@ const FridgeInventory = () => {
   const [activeCheckouts, setActiveCheckouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCheckout, setSelectedCheckout] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch statistics
   const fetchStats = async () => {
@@ -164,6 +165,20 @@ const FridgeInventory = () => {
                 Active Checkouts ({activeCheckouts.length})
               </h2>
 
+              {/* Search Bar */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Search by fridge number, student name, email, or housing..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-eco-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
               {activeCheckouts.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   No active checkouts. All fridges are available or in maintenance.
@@ -183,7 +198,32 @@ const FridgeInventory = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {activeCheckouts.map((checkout) => {
+                      {(() => {
+                        // Filter checkouts based on search query
+                        const filteredCheckouts = activeCheckouts.filter(checkout => {
+                          if (!searchQuery) return true;
+                          const query = searchQuery.toLowerCase();
+                          return (
+                            checkout.fridge_number?.toLowerCase().includes(query) ||
+                            checkout.student_name?.toLowerCase().includes(query) ||
+                            checkout.student_email?.toLowerCase().includes(query) ||
+                            checkout.housing_assignment?.toLowerCase().includes(query) ||
+                            checkout.brand?.toLowerCase().includes(query) ||
+                            checkout.model?.toLowerCase().includes(query)
+                          );
+                        });
+
+                        if (filteredCheckouts.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                                No checkouts match your search
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filteredCheckouts.map((checkout) => {
                         const isOverdue = new Date(checkout.expected_return_date) < new Date();
                         return (
                           <tr key={checkout.id} className={isOverdue ? 'bg-red-50' : ''}>
@@ -232,7 +272,8 @@ const FridgeInventory = () => {
                             </td>
                           </tr>
                         );
-                      })}
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>

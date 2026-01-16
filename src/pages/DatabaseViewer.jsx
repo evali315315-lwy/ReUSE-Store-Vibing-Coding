@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Search, Database, ChevronUp, ChevronDown, RefreshCw, CheckCircle, Clock, XCircle, Package, Users } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { CATEGORIES } from '../utils/categories';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -32,6 +33,12 @@ function DatabaseViewer() {
   const [inventorySortConfig, setInventorySortConfig] = useState({ key: 'item_name', direction: 'asc' });
   const [inventoryPage, setInventoryPage] = useState(1);
   const [inventoryPerPage] = useState(50);
+  const [categories, setCategories] = useState([]);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   // Fetch data based on active tab
   useEffect(() => {
@@ -41,6 +48,11 @@ function DatabaseViewer() {
       fetchInventory();
     }
   }, [activeTab]);
+
+  const fetchCategories = async () => {
+    // Use predefined categories from shop page
+    setCategories(CATEGORIES);
+  };
 
   const fetchCheckouts = async () => {
     setIsLoading(true);
@@ -335,6 +347,11 @@ function DatabaseViewer() {
   const startEditing = (type, id, field, currentValue) => {
     setEditingField({ type, id, field });
     setEditValue(currentValue || '');
+
+    // For inventory category field, show all categories immediately
+    if (type === 'inventory' && field === 'category') {
+      getInventorySuggestions(field, currentValue || '');
+    }
   };
 
   // Cancel editing
@@ -400,11 +417,60 @@ function DatabaseViewer() {
     setShowSuggestions(suggestionsList.length > 0);
   };
 
+  // Get suggestions for inventory fields
+  const getInventorySuggestions = (field, value) => {
+    if (field === 'category') {
+      // For category field, use categories from API
+      if (!value || value.length === 0) {
+        // Show all categories when empty
+        setSuggestions(categories);
+        setShowSuggestions(categories.length > 0);
+        return;
+      }
+
+      // Filter categories based on input
+      const lowerValue = value.toLowerCase();
+      const filteredCategories = categories.filter(cat =>
+        cat.toLowerCase().includes(lowerValue)
+      );
+      setSuggestions(filteredCategories);
+      setShowSuggestions(filteredCategories.length > 0);
+      return;
+    }
+
+    // For item_name field, search through inventory items
+    if (field === 'item_name') {
+      if (!value || value.length < 2) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      const lowerValue = value.toLowerCase();
+      let uniqueValues = new Set();
+
+      inventoryItems.forEach(item => {
+        if (item.item_name && item.item_name.toLowerCase().includes(lowerValue)) {
+          uniqueValues.add(item.item_name);
+        }
+      });
+
+      const suggestionsList = Array.from(uniqueValues).slice(0, 10);
+      setSuggestions(suggestionsList);
+      setShowSuggestions(suggestionsList.length > 0);
+    }
+  };
+
   // Handle input change with suggestions
   const handleEditValueChange = (value) => {
     setEditValue(value);
-    if (editingField && editingField.field !== 'date') {
-      getSuggestions(editingField.field, value);
+    if (editingField && editingField.field !== 'date' && editingField.field !== 'quantity') {
+      // For inventory fields, search through inventory items
+      if (editingField.type === 'inventory') {
+        getInventorySuggestions(editingField.field, value);
+      } else {
+        getSuggestions(editingField.field, value);
+      }
     }
   };
 
@@ -519,6 +585,43 @@ function DatabaseViewer() {
     }
   };
 
+  // Save inventory field
+  const saveInventoryField = async (inventoryId, field, value) => {
+    try {
+      const response = await axios.patch(`${API_URL}/inventory/${inventoryId}`, {
+        [field]: value
+      });
+
+      const updatedItem = response.data.item;
+
+      if (!updatedItem) {
+        throw new Error('No item returned from server');
+      }
+
+      // Update local state with the response from server
+      setInventoryItems(prev => {
+        const updated = prev.map(item =>
+          item.id === inventoryId ? updatedItem : item
+        );
+        return updated;
+      });
+
+      // Also update filtered inventory
+      setFilteredInventory(prev => {
+        const updated = prev.map(item =>
+          item.id === inventoryId ? updatedItem : item
+        );
+        return updated;
+      });
+
+      toast.success('Inventory updated successfully');
+      cancelEditing();
+    } catch (error) {
+      console.error('Error updating inventory:', error);
+      toast.error('Failed to update inventory');
+    }
+  };
+
   // Handle save based on type
   const handleSave = () => {
     if (!editingField) return;
@@ -538,6 +641,8 @@ function DatabaseViewer() {
       } else {
         saveItemField(id, field, editValue);
       }
+    } else if (type === 'inventory') {
+      saveInventoryField(id, field, editValue);
     }
   };
 
@@ -1541,19 +1646,137 @@ function DatabaseViewer() {
                         return paginatedItems.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                              {item.item_name}
+                              {editingField?.type === 'inventory' && editingField?.id === item.id && editingField?.field === 'item_name' ? (
+                                <div className="relative">
+                                  <div className="flex gap-2 items-center">
+                                    <input
+                                      type="text"
+                                      value={editValue}
+                                      onChange={(e) => handleEditValueChange(e.target.value)}
+                                      onKeyDown={handleKeyPress}
+                                      className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={handleSave}
+                                      className="px-2 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-xs"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={cancelEditing}
+                                      className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                  {showSuggestions && suggestions.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                      {suggestions.map((suggestion, idx) => (
+                                        <div
+                                          key={idx}
+                                          onClick={() => selectSuggestion(suggestion)}
+                                          className="px-3 py-2 hover:bg-eco-primary-50 cursor-pointer text-sm"
+                                        >
+                                          {suggestion}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span
+                                  className="cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors inline-block"
+                                  onClick={() => startEditing('inventory', item.id, 'item_name', item.item_name)}
+                                >
+                                  {item.item_name}
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {item.category || '-'}
+                              {editingField?.type === 'inventory' && editingField?.id === item.id && editingField?.field === 'category' ? (
+                                <div className="relative">
+                                  <div className="flex gap-2 items-center">
+                                    <input
+                                      type="text"
+                                      value={editValue}
+                                      onChange={(e) => handleEditValueChange(e.target.value)}
+                                      onKeyDown={handleKeyPress}
+                                      className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={handleSave}
+                                      className="px-2 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-xs"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={cancelEditing}
+                                      className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                  {showSuggestions && suggestions.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                      {suggestions.map((suggestion, idx) => (
+                                        <div
+                                          key={idx}
+                                          onClick={() => selectSuggestion(suggestion)}
+                                          className="px-3 py-2 hover:bg-eco-primary-50 cursor-pointer text-sm"
+                                        >
+                                          {suggestion}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span
+                                  className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors inline-block"
+                                  onClick={() => startEditing('inventory', item.id, 'category', item.category || '')}
+                                >
+                                  {item.category || '-'}
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <span className={`font-semibold ${
-                                item.quantity === 0 ? 'text-red-600' :
-                                item.quantity < 5 ? 'text-yellow-600' :
-                                'text-green-600'
-                              }`}>
-                                {item.quantity}
-                              </span>
+                              {editingField?.type === 'inventory' && editingField?.id === item.id && editingField?.field === 'quantity' ? (
+                                <div className="flex gap-1 items-center">
+                                  <input
+                                    type="number"
+                                    value={editValue}
+                                    onChange={(e) => handleEditValueChange(e.target.value)}
+                                    onKeyDown={handleKeyPress}
+                                    className="w-20 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500 text-sm"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={handleSave}
+                                    className="px-2 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-xs"
+                                  >
+                                    ✓
+                                  </button>
+                                  <button
+                                    onClick={cancelEditing}
+                                    className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <span
+                                  className={`font-semibold cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors inline-block ${
+                                    item.quantity === 0 ? 'text-red-600' :
+                                    item.quantity < 5 ? 'text-yellow-600' :
+                                    'text-green-600'
+                                  }`}
+                                  onClick={() => startEditing('inventory', item.id, 'quantity', item.quantity)}
+                                >
+                                  {item.quantity}
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(item.last_updated).toLocaleDateString()}

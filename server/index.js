@@ -640,6 +640,28 @@ app.patch('/api/items/:id', (req, res) => {
   }
 });
 
+// Delete item
+app.delete('/api/items/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if item exists
+    const item = db.prepare('SELECT * FROM items WHERE id = ?').get(id);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    // Delete the item
+    const stmt = db.prepare('DELETE FROM items WHERE id = ?');
+    stmt.run(id);
+
+    res.json({ success: true, message: 'Item deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting item:', error);
+    res.status(500).json({ error: 'Failed to delete item' });
+  }
+});
+
 // Search donors (for autocomplete in ProductLogForm)
 // Returns most recent information for each unique email (case-insensitive)
 app.get('/api/donors/search', (req, res) => {
@@ -977,6 +999,7 @@ app.get('/api/inventory', (req, res) => {
       SELECT
         id,
         item_name,
+        category,
         quantity,
         description,
         last_updated,
@@ -1041,33 +1064,32 @@ app.post('/api/inventory', (req, res) => {
 app.patch('/api/inventory/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { quantity, description } = req.body;
+    const updates = req.body;
 
-    const updates = [];
-    const params = [];
+    // Build dynamic update query only for provided fields
+    const allowedFields = ['item_name', 'category', 'quantity', 'description'];
+    const updateFields = [];
+    const updateValues = [];
 
-    if (quantity !== undefined) {
-      updates.push('quantity = ?');
-      params.push(quantity);
-    }
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key) && updates[key] !== undefined) {
+        updateFields.push(`${key} = ?`);
+        updateValues.push(updates[key]);
+      }
+    });
 
-    if (description !== undefined) {
-      updates.push('description = ?');
-      params.push(description);
-    }
-
-    if (updates.length === 0) {
+    if (updateFields.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    params.push(id);
-
+    // Update item with only the provided fields
+    updateValues.push(id);
     const stmt = db.prepare(`
       UPDATE inventory
-      SET ${updates.join(', ')}
+      SET ${updateFields.join(', ')}, last_updated = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
-    stmt.run(...params);
+    stmt.run(...updateValues);
 
     const updated = db.prepare('SELECT * FROM inventory WHERE id = ?').get(id);
     res.json({ message: 'Inventory item updated', item: updated });
