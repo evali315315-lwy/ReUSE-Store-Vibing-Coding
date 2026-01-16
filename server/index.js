@@ -518,7 +518,7 @@ app.patch('/api/checkouts/:id', (req, res) => {
     }
 
     // Build dynamic update query only for provided fields
-    const allowedFields = ['owner_name', 'email', 'housing_assignment', 'graduation_year'];
+    const allowedFields = ['owner_name', 'email', 'housing_assignment', 'graduation_year', 'date', 'year_range'];
     const updateFields = [];
     const updateValues = [];
 

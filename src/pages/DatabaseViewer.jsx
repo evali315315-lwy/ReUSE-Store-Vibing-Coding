@@ -1013,13 +1013,81 @@ function DatabaseViewer() {
                       <div>
                         <h3 className="text-lg font-semibold text-eco-primary-800 mb-3">Checkout Information</h3>
                         <div className="space-y-2">
+                          {/* Editable Date */}
                           <div>
                             <label className="text-sm text-gray-600">Date:</label>
-                            <p className="font-medium">{new Date(selectedCheckout.date).toLocaleDateString()}</p>
+                            {editingField?.type === 'checkout' && editingField?.id === selectedCheckout.id && editingField?.field === 'date' ? (
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="date"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyPress}
+                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={handleSave}
+                                  className="px-3 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-sm"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <p
+                                className="font-medium cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors"
+                                onClick={() => {
+                                  // Convert date to YYYY-MM-DD format for input
+                                  const dateObj = new Date(selectedCheckout.date);
+                                  const formattedDate = dateObj.toISOString().split('T')[0];
+                                  startEditing('checkout', selectedCheckout.id, 'date', formattedDate);
+                                }}
+                              >
+                                {new Date(selectedCheckout.date).toLocaleDateString()}
+                              </p>
+                            )}
                           </div>
+                          {/* Editable Year Range */}
                           <div>
                             <label className="text-sm text-gray-600">Year Range:</label>
-                            <p className="font-medium">{selectedCheckout.year_range}</p>
+                            {editingField?.type === 'checkout' && editingField?.id === selectedCheckout.id && editingField?.field === 'year_range' ? (
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyPress}
+                                  placeholder="e.g., 2024-2025"
+                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={handleSave}
+                                  className="px-3 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-sm"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <p
+                                className="font-medium cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors"
+                                onClick={() => startEditing('checkout', selectedCheckout.id, 'year_range', selectedCheckout.year_range)}
+                              >
+                                {selectedCheckout.year_range}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="text-sm text-gray-600">Total Items:</label>
