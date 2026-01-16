@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { Search, Database, ChevronUp, ChevronDown, RefreshCw, CheckCircle, Clock, XCircle, Package, Users } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -506,6 +506,14 @@ function DatabaseViewer() {
       cancelEditing();
     }
   };
+
+  // Memoize categorized items to ensure it updates when selectedCheckout.items changes
+  const categorizedItems = useMemo(() => {
+    if (!selectedCheckout?.items) {
+      return { generalItems: [], fridgeItems: [] };
+    }
+    return categorizeItems(selectedCheckout.items);
+  }, [selectedCheckout?.items]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-eco-primary-50 via-white to-eco-teal-light py-12 px-4 sm:px-6 lg:px-8">
@@ -1197,16 +1205,13 @@ function DatabaseViewer() {
                       <h3 className="text-lg font-semibold text-eco-primary-800 mb-3">Items Checked Out</h3>
 
                       {/* General Items */}
-                      {(() => {
-                        const { generalItems, fridgeItems } = categorizeItems(selectedCheckout.items);
-                        return (
-                          <>
-                            {generalItems.length > 0 && (
+                      <>
+                            {categorizedItems.generalItems.length > 0 && (
                               <div className="mb-4">
-                                <h4 className="font-semibold text-eco-primary-600 mb-2">General Items ({generalItems.length})</h4>
+                                <h4 className="font-semibold text-eco-primary-600 mb-2">General Items ({categorizedItems.generalItems.length})</h4>
                                 <div className="bg-gray-50 rounded-lg p-4">
                                   <div className="space-y-2">
-                                    {generalItems.map((item) => (
+                                    {categorizedItems.generalItems.map((item) => (
                                       <div key={item.id} className="border-b border-gray-200 pb-2">
                                         <div className="flex justify-between items-start gap-2">
                                           <div className="flex-1">
@@ -1318,12 +1323,12 @@ function DatabaseViewer() {
                             )}
 
                             {/* Fridge Items */}
-                            {fridgeItems.length > 0 && (
+                            {categorizedItems.fridgeItems.length > 0 && (
                               <div>
-                                <h4 className="font-semibold text-eco-teal-600 mb-2">Fridge Items ({fridgeItems.length})</h4>
+                                <h4 className="font-semibold text-eco-teal-600 mb-2">Fridge Items ({categorizedItems.fridgeItems.length})</h4>
                                 <div className="bg-eco-teal-50 rounded-lg p-4">
                                   <div className="space-y-2">
-                                    {fridgeItems.map((item) => (
+                                    {categorizedItems.fridgeItems.map((item) => (
                                       <div key={item.id} className="flex justify-between items-center border-b border-eco-teal-200 pb-2">
                                         <div>
                                           <p className="font-medium">{item.item_name}</p>
@@ -1355,12 +1360,10 @@ function DatabaseViewer() {
                               </div>
                             )}
 
-                            {generalItems.length === 0 && fridgeItems.length === 0 && (
+                            {categorizedItems.generalItems.length === 0 && categorizedItems.fridgeItems.length === 0 && (
                               <p className="text-gray-500 text-center py-4">No items found</p>
                             )}
                           </>
-                        );
-                      })()}
                     </div>
                   </div>
                 </div>
