@@ -18,6 +18,8 @@ function DatabaseViewer() {
   const [selectedYear, setSelectedYear] = useState('all');
   const [availableYears, setAvailableYears] = useState([]);
   const [selectedCheckout, setSelectedCheckout] = useState(null);
+  const [editingField, setEditingField] = useState(null); // { type: 'checkout|item', id, field }
+  const [editValue, setEditValue] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
 
@@ -323,6 +325,107 @@ function DatabaseViewer() {
 
   const closeModal = () => {
     setSelectedCheckout(null);
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  // Start editing a field
+  const startEditing = (type, id, field, currentValue) => {
+    setEditingField({ type, id, field });
+    setEditValue(currentValue || '');
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  // Save checkout field
+  const saveCheckoutField = async (checkoutId, field, value) => {
+    try {
+      await axios.patch(`${API_URL}/checkouts/${checkoutId}`, {
+        [field]: value
+      });
+
+      // Update local state
+      setSelectedCheckout(prev => ({
+        ...prev,
+        [field]: value
+      }));
+
+      // Update in the list
+      setCheckouts(prev => prev.map(c =>
+        c.id === checkoutId ? { ...c, [field]: value } : c
+      ));
+      setFilteredCheckouts(prev => prev.map(c =>
+        c.id === checkoutId ? { ...c, [field]: value } : c
+      ));
+
+      toast.success('Field updated successfully');
+      cancelEditing();
+    } catch (error) {
+      console.error('Error updating checkout:', error);
+      toast.error('Failed to update field');
+    }
+  };
+
+  // Save item field
+  const saveItemField = async (itemId, field, value) => {
+    try {
+      await axios.patch(`${API_URL}/items/${itemId}`, {
+        [field]: value
+      });
+
+      // Update local state
+      setSelectedCheckout(prev => ({
+        ...prev,
+        items: prev.items.map(item =>
+          item.id === itemId ? { ...item, [field]: value } : item
+        )
+      }));
+
+      // Update in the list
+      setCheckouts(prev => prev.map(c => ({
+        ...c,
+        items: c.items?.map(item =>
+          item.id === itemId ? { ...item, [field]: value } : item
+        )
+      })));
+      setFilteredCheckouts(prev => prev.map(c => ({
+        ...c,
+        items: c.items?.map(item =>
+          item.id === itemId ? { ...item, [field]: value } : item
+        )
+      })));
+
+      toast.success('Item updated successfully');
+      cancelEditing();
+    } catch (error) {
+      console.error('Error updating item:', error);
+      toast.error('Failed to update item');
+    }
+  };
+
+  // Handle save based on type
+  const handleSave = () => {
+    if (!editingField) return;
+
+    const { type, id, field } = editingField;
+    if (type === 'checkout') {
+      saveCheckoutField(id, field, editValue);
+    } else if (type === 'item') {
+      saveItemField(id, field, editValue);
+    }
+  };
+
+  // Handle key press (Enter to save, Escape to cancel)
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      cancelEditing();
+    }
   };
 
   return (
@@ -764,21 +867,145 @@ function DatabaseViewer() {
                             <label className="text-sm text-gray-600">Checkout ID:</label>
                             <p className="font-medium">{selectedCheckout.id}</p>
                           </div>
+                          {/* Editable Name */}
                           <div>
                             <label className="text-sm text-gray-600">Name:</label>
-                            <p className="font-medium">{selectedCheckout.owner_name}</p>
+                            {editingField?.type === 'checkout' && editingField?.id === selectedCheckout.id && editingField?.field === 'owner_name' ? (
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyPress}
+                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={handleSave}
+                                  className="px-3 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-sm"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <p
+                                className="font-medium cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors"
+                                onClick={() => startEditing('checkout', selectedCheckout.id, 'owner_name', selectedCheckout.owner_name)}
+                              >
+                                {selectedCheckout.owner_name}
+                              </p>
+                            )}
                           </div>
+                          {/* Editable Email */}
                           <div>
                             <label className="text-sm text-gray-600">Email:</label>
-                            <p className="font-medium">{selectedCheckout.email}</p>
+                            {editingField?.type === 'checkout' && editingField?.id === selectedCheckout.id && editingField?.field === 'email' ? (
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="email"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyPress}
+                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={handleSave}
+                                  className="px-3 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-sm"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <p
+                                className="font-medium cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors"
+                                onClick={() => startEditing('checkout', selectedCheckout.id, 'email', selectedCheckout.email)}
+                              >
+                                {selectedCheckout.email}
+                              </p>
+                            )}
                           </div>
+                          {/* Editable Housing */}
                           <div>
                             <label className="text-sm text-gray-600">Housing:</label>
-                            <p className="font-medium">{selectedCheckout.housing_assignment || 'N/A'}</p>
+                            {editingField?.type === 'checkout' && editingField?.id === selectedCheckout.id && editingField?.field === 'housing_assignment' ? (
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyPress}
+                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={handleSave}
+                                  className="px-3 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-sm"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <p
+                                className="font-medium cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors"
+                                onClick={() => startEditing('checkout', selectedCheckout.id, 'housing_assignment', selectedCheckout.housing_assignment)}
+                              >
+                                {selectedCheckout.housing_assignment || 'N/A'}
+                              </p>
+                            )}
                           </div>
+                          {/* Editable Graduation Year */}
                           <div>
                             <label className="text-sm text-gray-600">Graduation Year:</label>
-                            <p className="font-medium">{selectedCheckout.graduation_year || 'N/A'}</p>
+                            {editingField?.type === 'checkout' && editingField?.id === selectedCheckout.id && editingField?.field === 'graduation_year' ? (
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleKeyPress}
+                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={handleSave}
+                                  className="px-3 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-sm"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <p
+                                className="font-medium cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors"
+                                onClick={() => startEditing('checkout', selectedCheckout.id, 'graduation_year', selectedCheckout.graduation_year)}
+                              >
+                                {selectedCheckout.graduation_year || 'N/A'}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -817,16 +1044,109 @@ function DatabaseViewer() {
                                 <div className="bg-gray-50 rounded-lg p-4">
                                   <div className="space-y-2">
                                     {generalItems.map((item) => (
-                                      <div key={item.id} className="flex justify-between items-center border-b border-gray-200 pb-2">
-                                        <div>
-                                          <p className="font-medium">{item.item_name}</p>
-                                          {item.description && (
-                                            <p className="text-sm text-gray-600">{item.description}</p>
-                                          )}
+                                      <div key={item.id} className="border-b border-gray-200 pb-2">
+                                        <div className="flex justify-between items-start gap-2">
+                                          <div className="flex-1">
+                                            {/* Editable Item Name */}
+                                            {editingField?.type === 'item' && editingField?.id === item.id && editingField?.field === 'item_name' ? (
+                                              <div className="flex gap-2 items-center mb-2">
+                                                <input
+                                                  type="text"
+                                                  value={editValue}
+                                                  onChange={(e) => setEditValue(e.target.value)}
+                                                  onKeyDown={handleKeyPress}
+                                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                                  autoFocus
+                                                />
+                                                <button
+                                                  onClick={handleSave}
+                                                  className="px-2 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-xs"
+                                                >
+                                                  Save
+                                                </button>
+                                                <button
+                                                  onClick={cancelEditing}
+                                                  className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <p
+                                                className="font-medium cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors inline-block"
+                                                onClick={() => startEditing('item', item.id, 'item_name', item.item_name)}
+                                              >
+                                                {item.item_name}
+                                              </p>
+                                            )}
+                                            {/* Editable Description */}
+                                            {editingField?.type === 'item' && editingField?.id === item.id && editingField?.field === 'description' ? (
+                                              <div className="flex gap-2 items-center">
+                                                <input
+                                                  type="text"
+                                                  value={editValue}
+                                                  onChange={(e) => setEditValue(e.target.value)}
+                                                  onKeyDown={handleKeyPress}
+                                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500 text-sm"
+                                                  autoFocus
+                                                />
+                                                <button
+                                                  onClick={handleSave}
+                                                  className="px-2 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-xs"
+                                                >
+                                                  Save
+                                                </button>
+                                                <button
+                                                  onClick={cancelEditing}
+                                                  className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <p
+                                                className="text-sm text-gray-600 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors inline-block"
+                                                onClick={() => startEditing('item', item.id, 'description', item.description)}
+                                              >
+                                                {item.description || 'Click to add description'}
+                                              </p>
+                                            )}
+                                          </div>
+                                          {/* Editable Quantity */}
+                                          <div>
+                                            {editingField?.type === 'item' && editingField?.id === item.id && editingField?.field === 'item_quantity' ? (
+                                              <div className="flex gap-1 items-center">
+                                                <input
+                                                  type="number"
+                                                  value={editValue}
+                                                  onChange={(e) => setEditValue(e.target.value)}
+                                                  onKeyDown={handleKeyPress}
+                                                  className="w-16 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500 text-sm"
+                                                  autoFocus
+                                                />
+                                                <button
+                                                  onClick={handleSave}
+                                                  className="px-2 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-xs"
+                                                >
+                                                  ✓
+                                                </button>
+                                                <button
+                                                  onClick={cancelEditing}
+                                                  className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
+                                                >
+                                                  ✕
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <span
+                                                className="text-sm font-semibold text-eco-primary-600 cursor-pointer hover:bg-eco-primary-50 px-2 py-1 rounded transition-colors inline-block"
+                                                onClick={() => startEditing('item', item.id, 'item_quantity', item.item_quantity)}
+                                              >
+                                                Qty: {item.item_quantity}
+                                              </span>
+                                            )}
+                                          </div>
                                         </div>
-                                        <span className="text-sm font-semibold text-eco-primary-600">
-                                          Qty: {item.item_quantity}
-                                        </span>
                                       </div>
                                     ))}
                                   </div>
