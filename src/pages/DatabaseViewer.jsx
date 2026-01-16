@@ -20,6 +20,8 @@ function DatabaseViewer() {
   const [selectedCheckout, setSelectedCheckout] = useState(null);
   const [editingField, setEditingField] = useState(null); // { type: 'checkout|item', id, field }
   const [editValue, setEditValue] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
 
@@ -339,6 +341,78 @@ function DatabaseViewer() {
   const cancelEditing = () => {
     setEditingField(null);
     setEditValue('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  // Get suggestions based on field type and current value
+  const getSuggestions = (field, value) => {
+    if (!value || value.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const lowerValue = value.toLowerCase();
+    let uniqueValues = new Set();
+
+    // Get unique values from all checkouts based on field
+    checkouts.forEach(checkout => {
+      if (field === 'owner_name' && checkout.owner_name) {
+        if (checkout.owner_name.toLowerCase().includes(lowerValue)) {
+          uniqueValues.add(checkout.owner_name);
+        }
+      } else if (field === 'email' && checkout.email) {
+        if (checkout.email.toLowerCase().includes(lowerValue)) {
+          uniqueValues.add(checkout.email);
+        }
+      } else if (field === 'housing_assignment' && checkout.housing_assignment) {
+        if (checkout.housing_assignment.toLowerCase().includes(lowerValue)) {
+          uniqueValues.add(checkout.housing_assignment);
+        }
+      } else if (field === 'graduation_year' && checkout.graduation_year) {
+        if (checkout.graduation_year.toString().includes(value)) {
+          uniqueValues.add(checkout.graduation_year.toString());
+        }
+      } else if (field === 'year_range' && checkout.year_range) {
+        if (checkout.year_range.toLowerCase().includes(lowerValue)) {
+          uniqueValues.add(checkout.year_range);
+        }
+      } else if (field === 'item_name') {
+        // Search through all items
+        checkout.items?.forEach(item => {
+          if (item.item_name && item.item_name.toLowerCase().includes(lowerValue)) {
+            uniqueValues.add(item.item_name);
+          }
+        });
+      } else if (field === 'description') {
+        // Search through all item descriptions
+        checkout.items?.forEach(item => {
+          if (item.description && item.description.toLowerCase().includes(lowerValue)) {
+            uniqueValues.add(item.description);
+          }
+        });
+      }
+    });
+
+    const suggestionsList = Array.from(uniqueValues).slice(0, 10); // Limit to 10 suggestions
+    setSuggestions(suggestionsList);
+    setShowSuggestions(suggestionsList.length > 0);
+  };
+
+  // Handle input change with suggestions
+  const handleEditValueChange = (value) => {
+    setEditValue(value);
+    if (editingField && editingField.field !== 'date') {
+      getSuggestions(editingField.field, value);
+    }
+  };
+
+  // Select a suggestion
+  const selectSuggestion = (suggestion) => {
+    setEditValue(suggestion);
+    setSuggestions([]);
+    setShowSuggestions(false);
   };
 
   // Save checkout field
@@ -871,27 +945,43 @@ function DatabaseViewer() {
                           <div>
                             <label className="text-sm text-gray-600">Name:</label>
                             {editingField?.type === 'checkout' && editingField?.id === selectedCheckout.id && editingField?.field === 'owner_name' ? (
-                              <div className="flex gap-2 items-center">
-                                <input
-                                  type="text"
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  onKeyDown={handleKeyPress}
-                                  className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={handleSave}
-                                  className="px-3 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-sm"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={cancelEditing}
-                                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
-                                >
-                                  Cancel
-                                </button>
+                              <div className="relative">
+                                <div className="flex gap-2 items-center">
+                                  <input
+                                    type="text"
+                                    value={editValue}
+                                    onChange={(e) => handleEditValueChange(e.target.value)}
+                                    onKeyDown={handleKeyPress}
+                                    className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={handleSave}
+                                    className="px-3 py-1 bg-eco-primary-600 text-white rounded hover:bg-eco-primary-700 text-sm"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={cancelEditing}
+                                    className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                                {/* Suggestions Dropdown */}
+                                {showSuggestions && suggestions.length > 0 && (
+                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                    {suggestions.map((suggestion, index) => (
+                                      <div
+                                        key={index}
+                                        className="px-3 py-2 hover:bg-eco-primary-50 cursor-pointer text-sm"
+                                        onClick={() => selectSuggestion(suggestion)}
+                                      >
+                                        {suggestion}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <p
@@ -910,7 +1000,7 @@ function DatabaseViewer() {
                                 <input
                                   type="email"
                                   value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onChange={(e) => handleEditValueChange(e.target.value)}
                                   onKeyDown={handleKeyPress}
                                   className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
                                   autoFocus
@@ -945,7 +1035,7 @@ function DatabaseViewer() {
                                 <input
                                   type="text"
                                   value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onChange={(e) => handleEditValueChange(e.target.value)}
                                   onKeyDown={handleKeyPress}
                                   className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
                                   autoFocus
@@ -980,7 +1070,7 @@ function DatabaseViewer() {
                                 <input
                                   type="text"
                                   value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onChange={(e) => handleEditValueChange(e.target.value)}
                                   onKeyDown={handleKeyPress}
                                   className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
                                   autoFocus
@@ -1021,7 +1111,7 @@ function DatabaseViewer() {
                                 <input
                                   type="date"
                                   value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onChange={(e) => handleEditValueChange(e.target.value)}
                                   onKeyDown={handleKeyPress}
                                   className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
                                   autoFocus
@@ -1061,7 +1151,7 @@ function DatabaseViewer() {
                                 <input
                                   type="text"
                                   value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onChange={(e) => handleEditValueChange(e.target.value)}
                                   onKeyDown={handleKeyPress}
                                   placeholder="e.g., 2024-2025"
                                   className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
@@ -1121,7 +1211,7 @@ function DatabaseViewer() {
                                                 <input
                                                   type="text"
                                                   value={editValue}
-                                                  onChange={(e) => setEditValue(e.target.value)}
+                                                  onChange={(e) => handleEditValueChange(e.target.value)}
                                                   onKeyDown={handleKeyPress}
                                                   className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500"
                                                   autoFocus
@@ -1153,7 +1243,7 @@ function DatabaseViewer() {
                                                 <input
                                                   type="text"
                                                   value={editValue}
-                                                  onChange={(e) => setEditValue(e.target.value)}
+                                                  onChange={(e) => handleEditValueChange(e.target.value)}
                                                   onKeyDown={handleKeyPress}
                                                   className="flex-1 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500 text-sm"
                                                   autoFocus
@@ -1187,7 +1277,7 @@ function DatabaseViewer() {
                                                 <input
                                                   type="number"
                                                   value={editValue}
-                                                  onChange={(e) => setEditValue(e.target.value)}
+                                                  onChange={(e) => handleEditValueChange(e.target.value)}
                                                   onKeyDown={handleKeyPress}
                                                   className="w-16 px-2 py-1 border border-eco-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-eco-primary-500 text-sm"
                                                   autoFocus
