@@ -509,7 +509,7 @@ app.get('/api/checkouts/:id', (req, res) => {
 app.patch('/api/checkouts/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { owner_name, email, housing_assignment, graduation_year } = req.body;
+    const updates = req.body;
 
     // Check if checkout exists
     const checkout = db.prepare('SELECT * FROM checkouts WHERE id = ?').get(id);
@@ -517,17 +517,31 @@ app.patch('/api/checkouts/:id', (req, res) => {
       return res.status(404).json({ error: 'Checkout not found' });
     }
 
-    // Update checkout
+    // Build dynamic update query only for provided fields
+    const allowedFields = ['owner_name', 'email', 'housing_assignment', 'graduation_year'];
+    const updateFields = [];
+    const updateValues = [];
+
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key) && updates[key] !== undefined) {
+        updateFields.push(`${key} = ?`);
+        updateValues.push(updates[key]);
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    // Update checkout with only the provided fields
+    updateValues.push(id);
     const stmt = db.prepare(`
       UPDATE checkouts
-      SET owner_name = ?,
-          email = ?,
-          housing_assignment = ?,
-          graduation_year = ?
+      SET ${updateFields.join(', ')}
       WHERE id = ?
     `);
 
-    stmt.run(owner_name, email, housing_assignment, graduation_year, id);
+    stmt.run(...updateValues);
 
     // Return updated checkout
     const updatedCheckout = db.prepare('SELECT * FROM checkouts WHERE id = ?').get(id);
@@ -583,7 +597,7 @@ app.get('/api/items/search', (req, res) => {
 app.patch('/api/items/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { item_name, description, item_quantity } = req.body;
+    const updates = req.body;
 
     // Check if item exists
     const item = db.prepare('SELECT * FROM items WHERE id = ?').get(id);
@@ -591,16 +605,31 @@ app.patch('/api/items/:id', (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    // Update item
+    // Build dynamic update query only for provided fields
+    const allowedFields = ['item_name', 'description', 'item_quantity'];
+    const updateFields = [];
+    const updateValues = [];
+
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key) && updates[key] !== undefined) {
+        updateFields.push(`${key} = ?`);
+        updateValues.push(updates[key]);
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    // Update item with only the provided fields
+    updateValues.push(id);
     const stmt = db.prepare(`
       UPDATE items
-      SET item_name = ?,
-          description = ?,
-          item_quantity = ?
+      SET ${updateFields.join(', ')}
       WHERE id = ?
     `);
 
-    stmt.run(item_name, description, item_quantity, id);
+    stmt.run(...updateValues);
 
     // Return updated item
     const updatedItem = db.prepare('SELECT * FROM items WHERE id = ?').get(id);
