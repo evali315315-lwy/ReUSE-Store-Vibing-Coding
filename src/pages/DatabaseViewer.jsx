@@ -486,6 +486,39 @@ function DatabaseViewer() {
     }
   };
 
+  // Delete item
+  const deleteItem = async (itemId) => {
+    try {
+      await axios.delete(`${API_URL}/items/${itemId}`);
+
+      // Update local state - remove item from array
+      setSelectedCheckout(prev => {
+        const updatedItems = prev.items.filter(item => item.id !== itemId);
+        return {
+          ...prev,
+          items: updatedItems,
+          totalItems: updatedItems.length
+        };
+      });
+
+      // Update in the list
+      setCheckouts(prev => prev.map(c => ({
+        ...c,
+        items: c.items?.filter(item => item.id !== itemId)
+      })));
+      setFilteredCheckouts(prev => prev.map(c => ({
+        ...c,
+        items: c.items?.filter(item => item.id !== itemId)
+      })));
+
+      toast.success('Item removed successfully');
+      cancelEditing();
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast.error('Failed to remove item');
+    }
+  };
+
   // Handle save based on type
   const handleSave = () => {
     if (!editingField) return;
@@ -494,7 +527,17 @@ function DatabaseViewer() {
     if (type === 'checkout') {
       saveCheckoutField(id, field, editValue);
     } else if (type === 'item') {
-      saveItemField(id, field, editValue);
+      // Check if quantity is being set to 0
+      if (field === 'item_quantity' && parseInt(editValue) === 0) {
+        // Show confirmation dialog
+        if (window.confirm('Are you sure you want to remove this item from the list?')) {
+          deleteItem(id);
+        } else {
+          cancelEditing();
+        }
+      } else {
+        saveItemField(id, field, editValue);
+      }
     }
   };
 
